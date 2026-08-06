@@ -131,6 +131,7 @@ CREATE TABLE "users" (
 	"center_id" uuid,
 	"google_id" text,
 	"image" text,
+	"password_hash" text,
 	"activated" boolean DEFAULT false NOT NULL,
 	"lang" "lang" DEFAULT 'fr' NOT NULL,
 	"consent_at" timestamp with time zone,

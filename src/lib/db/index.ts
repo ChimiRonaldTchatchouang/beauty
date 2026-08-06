@@ -16,7 +16,7 @@ if (!connectionString) {
 // Placeholder au format valide : évite que neon() ne jette à l'import (build
 // Next évalue les modules) ; une vraie requête échouera clairement au runtime.
 const sql = neon(
-  connectionString ?? "postgresql://user:password@localhost/db",
+  connectionString || "postgresql://user:password@localhost/db",
 );
 
 export const db = drizzle(sql, { schema });

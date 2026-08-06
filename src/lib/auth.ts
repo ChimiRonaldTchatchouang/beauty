@@ -1,9 +1,18 @@
 import "server-only";
 import { cookies } from "next/headers";
 import { SignJWT, jwtVerify } from "jose";
+import bcrypt from "bcryptjs";
 import { db } from "./db";
 import { users } from "./db/schema";
 import { eq } from "drizzle-orm";
+
+export async function hashPassword(password: string): Promise<string> {
+  return bcrypt.hash(password, 10);
+}
+
+export async function verifyPassword(password: string, hash: string): Promise<boolean> {
+  return bcrypt.compare(password, hash);
+}
 
 const COOKIE_NAME = "skinscan_session";
 const SESSION_DAYS = 30;

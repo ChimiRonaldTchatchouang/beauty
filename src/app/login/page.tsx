@@ -2,6 +2,7 @@ import Link from "next/link";
 import { getSession, homeForRole } from "@/lib/auth";
 import { redirect } from "next/navigation";
 import { SparkleIcon, GoogleIcon } from "@/components/icons";
+import { PasswordLoginForm } from "@/components/PasswordLoginForm";
 
 const ERRORS: Record<string, string> = {
   oauth_state: "Session expirée, réessayez.",
@@ -47,9 +48,11 @@ export default async function LoginPage({
         </a>
 
         <p className="mt-6 max-w-xs text-xs text-ink-faint">
-          Patients, centres et administrateurs se connectent avec Google. Votre
-          rôle est reconnu automatiquement.
+          Patients et centres se connectent avec Google. Votre rôle est reconnu
+          automatiquement.
         </p>
+
+        <PasswordLoginForm />
       </main>
 
       <footer className="relative px-6 pb-8 text-center text-xs text-ink-faint">

@@ -122,9 +122,12 @@ export const users = pgTable(
       onDelete: "set null",
     }),
 
-    // Auth Google.
+    // Auth Google (patients / centres).
     googleId: text("google_id").unique(),
     image: text("image"),
+
+    // Auth email + mot de passe (admin / comptes provisionnés).
+    passwordHash: text("password_hash"),
 
     // Un patient créé par le centre mais pas encore connecté = pas encore "actif".
     activated: boolean("activated").notNull().default(false),

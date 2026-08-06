@@ -1,5 +1,5 @@
 {
-  "id": "cb0e09a6-62c0-453e-8f2b-43beb5b9f4ef",
+  "id": "cf87dbb6-a13d-438e-ae81-d26f6ea10d72",
   "prevId": "00000000-0000-0000-0000-000000000000",
   "version": "7",
   "dialect": "postgresql",
@@ -1072,6 +1072,12 @@
         },
         "image": {
           "name": "image",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "password_hash": {
+          "name": "password_hash",
           "type": "text",
           "primaryKey": false,
           "notNull": false
