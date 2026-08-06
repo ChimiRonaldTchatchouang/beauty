@@ -4,18 +4,17 @@ import { users, skinProfiles, scans } from "@/lib/db/schema";
 import { eq } from "drizzle-orm";
 import { getSession } from "@/lib/auth";
 
-// Export RGPD-like : renvoie toutes les données de l'utilisateur en JSON.
+// Export RGPD-like : toutes les données du patient courant en JSON.
 export async function GET() {
   const session = await getSession();
-  if (!session) {
-    return NextResponse.json({ error: "Non authentifié." }, { status: 401 });
-  }
+  if (!session) return NextResponse.json({ error: "Non authentifié." }, { status: 401 });
+
   const [user] = await db
     .select({
       id: users.id,
       email: users.email,
       name: users.name,
-      plan: users.plan,
+      role: users.role,
       lang: users.lang,
       consentAt: users.consentAt,
       createdAt: users.createdAt,
@@ -28,10 +27,7 @@ export async function GET() {
     .from(skinProfiles)
     .where(eq(skinProfiles.userId, session.userId))
     .limit(1);
-  const myScans = await db
-    .select()
-    .from(scans)
-    .where(eq(scans.userId, session.userId));
+  const myScans = await db.select().from(scans).where(eq(scans.patientId, session.userId));
 
   const payload = { exportedAt: new Date().toISOString(), user, profile, scans: myScans };
   return new NextResponse(JSON.stringify(payload, null, 2), {

@@ -15,7 +15,7 @@ interface ScanRow {
   createdAt: string | Date;
 }
 
-export function HistoryView({ scans }: { scans: ScanRow[] }) {
+export function HistoryView({ scans, basePath = "/me/history" }: { scans: ScanRow[]; basePath?: string }) {
   const { t, lang } = useI18n();
   const [compareMode, setCompareMode] = useState(false);
   const [selected, setSelected] = useState<string[]>([]);
@@ -29,9 +29,6 @@ export function HistoryView({ scans }: { scans: ScanRow[] }) {
         <div className="mb-4 text-5xl">📭</div>
         <h1 className="text-xl font-bold">{t.history.title}</h1>
         <p className="mt-2 text-ink-soft">{t.history.empty}</p>
-        <Link href="/scan" className="btn-primary mt-6">
-          {t.history.emptyCta}
-        </Link>
       </div>
     );
   }
@@ -159,7 +156,7 @@ export function HistoryView({ scans }: { scans: ScanRow[] }) {
               {content}
             </button>
           ) : (
-            <Link key={s.id} href={`/history/${s.id}`}>
+            <Link key={s.id} href={`${basePath}/${s.id}`}>
               {content}
             </Link>
           );

@@ -14,8 +14,8 @@ export function ScanActions({ scanId }: { scanId: string }) {
     if (!confirm(t.profile.deleteData + " ?")) return;
     setBusy(true);
     try {
-      await fetch(`/api/scans/${scanId}`, { method: "DELETE" });
-      router.push("/history");
+      await fetch(`/api/me/scans/${scanId}`, { method: "DELETE" });
+      router.push("/me/history");
       router.refresh();
     } finally {
       setBusy(false);
@@ -23,8 +23,8 @@ export function ScanActions({ scanId }: { scanId: string }) {
   }
 
   async function share() {
-    const url = `${window.location.origin}/scan`;
-    const text = "J'ai analysé ma peau avec SkinScan ✨ — via l'app";
+    const url = `${window.location.origin}/`;
+    const text = "J'ai suivi mon analyse de peau avec SkinScan ✨";
     if (navigator.share) {
       await navigator.share({ title: "SkinScan", text, url }).catch(() => {});
     } else {

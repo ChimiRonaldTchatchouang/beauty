@@ -21,7 +21,7 @@ const GENERIC_PRODUCTS = [
 async function main() {
   console.log("Seeding produits génériques…");
   for (const p of GENERIC_PRODUCTS) {
-    await db.insert(products).values({ ...p, partnerId: null }).onConflictDoNothing();
+    await db.insert(products).values({ ...p, centerId: null }).onConflictDoNothing();
   }
   console.log(`✓ ${GENERIC_PRODUCTS.length} produits insérés.`);
 }

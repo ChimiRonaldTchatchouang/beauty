@@ -1,11 +1,11 @@
 {
-  "id": "bfb8b4c9-3e66-4b0c-8e57-1f97cb3aa269",
+  "id": "cb0e09a6-62c0-453e-8f2b-43beb5b9f4ef",
   "prevId": "00000000-0000-0000-0000-000000000000",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
-    "public.partner_transactions": {
-      "name": "partner_transactions",
+    "public.appointments": {
+      "name": "appointments",
       "schema": "",
       "columns": {
         "id": {
@@ -15,21 +15,273 @@
           "notNull": true,
           "default": "gen_random_uuid()"
         },
-        "partner_id": {
-          "name": "partner_id",
+        "center_id": {
+          "name": "center_id",
           "type": "uuid",
           "primaryKey": false,
           "notNull": true
         },
-        "kind": {
-          "name": "kind",
+        "patient_id": {
+          "name": "patient_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "staff_id": {
+          "name": "staff_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "scan_id": {
+          "name": "scan_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "scheduled_at": {
+          "name": "scheduled_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "duration_min": {
+          "name": "duration_min",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false,
+          "default": 45
+        },
+        "status": {
+          "name": "status",
+          "type": "appointment_status",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'scheduled'"
+        },
+        "reason": {
+          "name": "reason",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "notes": {
+          "name": "notes",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "appointments_center_sched_idx": {
+          "name": "appointments_center_sched_idx",
+          "columns": [
+            {
+              "expression": "center_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "scheduled_at",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "appointments_patient_idx": {
+          "name": "appointments_patient_idx",
+          "columns": [
+            {
+              "expression": "patient_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "appointments_center_id_centers_id_fk": {
+          "name": "appointments_center_id_centers_id_fk",
+          "tableFrom": "appointments",
+          "tableTo": "centers",
+          "columnsFrom": [
+            "center_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "appointments_patient_id_users_id_fk": {
+          "name": "appointments_patient_id_users_id_fk",
+          "tableFrom": "appointments",
+          "tableTo": "users",
+          "columnsFrom": [
+            "patient_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "appointments_staff_id_users_id_fk": {
+          "name": "appointments_staff_id_users_id_fk",
+          "tableFrom": "appointments",
+          "tableTo": "users",
+          "columnsFrom": [
+            "staff_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "set null",
+          "onUpdate": "no action"
+        },
+        "appointments_scan_id_scans_id_fk": {
+          "name": "appointments_scan_id_scans_id_fk",
+          "tableFrom": "appointments",
+          "tableTo": "scans",
+          "columnsFrom": [
+            "scan_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "set null",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.centers": {
+      "name": "centers",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "name": {
+          "name": "name",
           "type": "text",
           "primaryKey": false,
           "notNull": true
         },
-        "amount_credits": {
-          "name": "amount_credits",
-          "type": "integer",
+        "type": {
+          "name": "type",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'beauty_center'"
+        },
+        "city": {
+          "name": "city",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "contact_email": {
+          "name": "contact_email",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "contact_phone": {
+          "name": "contact_phone",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "logo_url": {
+          "name": "logo_url",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "brand_color": {
+          "name": "brand_color",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "default": "'#d95b3c'"
+        },
+        "active": {
+          "name": "active",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": true
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.license_transactions": {
+      "name": "license_transactions",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "center_id": {
+          "name": "center_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "license_id": {
+          "name": "license_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "kind": {
+          "name": "kind",
+          "type": "text",
           "primaryKey": false,
           "notNull": true
         },
@@ -68,17 +320,30 @@
       },
       "indexes": {},
       "foreignKeys": {
-        "partner_transactions_partner_id_partners_id_fk": {
-          "name": "partner_transactions_partner_id_partners_id_fk",
-          "tableFrom": "partner_transactions",
-          "tableTo": "partners",
+        "license_transactions_center_id_centers_id_fk": {
+          "name": "license_transactions_center_id_centers_id_fk",
+          "tableFrom": "license_transactions",
+          "tableTo": "centers",
           "columnsFrom": [
-            "partner_id"
+            "center_id"
           ],
           "columnsTo": [
             "id"
           ],
           "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "license_transactions_license_id_licenses_id_fk": {
+          "name": "license_transactions_license_id_licenses_id_fk",
+          "tableFrom": "license_transactions",
+          "tableTo": "licenses",
+          "columnsFrom": [
+            "license_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "set null",
           "onUpdate": "no action"
         }
       },
@@ -88,8 +353,8 @@
       "checkConstraints": {},
       "isRLSEnabled": false
     },
-    "public.partners": {
-      "name": "partners",
+    "public.licenses": {
+      "name": "licenses",
       "schema": "",
       "columns": {
         "id": {
@@ -99,44 +364,67 @@
           "notNull": true,
           "default": "gen_random_uuid()"
         },
-        "name": {
-          "name": "name",
-          "type": "text",
+        "center_id": {
+          "name": "center_id",
+          "type": "uuid",
           "primaryKey": false,
           "notNull": true
         },
-        "type": {
-          "name": "type",
-          "type": "text",
+        "plan": {
+          "name": "plan",
+          "type": "license_plan",
+          "typeSchema": "public",
           "primaryKey": false,
           "notNull": true,
-          "default": "'pharmacy'"
+          "default": "'trial'"
         },
-        "contact_email": {
-          "name": "contact_email",
-          "type": "text",
+        "status": {
+          "name": "status",
+          "type": "license_status",
+          "typeSchema": "public",
           "primaryKey": false,
-          "notNull": false
+          "notNull": true,
+          "default": "'active'"
         },
-        "contact_phone": {
-          "name": "contact_phone",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "scan_credits": {
-          "name": "scan_credits",
+        "monthly_scan_quota": {
+          "name": "monthly_scan_quota",
           "type": "integer",
           "primaryKey": false,
-          "notNull": true,
-          "default": 0
+          "notNull": false,
+          "default": 50
         },
-        "active": {
-          "name": "active",
-          "type": "boolean",
+        "max_staff": {
+          "name": "max_staff",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false,
+          "default": 3
+        },
+        "price_cents": {
+          "name": "price_cents",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "currency": {
+          "name": "currency",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "default": "'XAF'"
+        },
+        "starts_at": {
+          "name": "starts_at",
+          "type": "timestamp with time zone",
           "primaryKey": false,
           "notNull": true,
-          "default": true
+          "default": "now()"
+        },
+        "expires_at": {
+          "name": "expires_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
         },
         "created_at": {
           "name": "created_at",
@@ -146,8 +434,38 @@
           "default": "now()"
         }
       },
-      "indexes": {},
-      "foreignKeys": {},
+      "indexes": {
+        "licenses_center_idx": {
+          "name": "licenses_center_idx",
+          "columns": [
+            {
+              "expression": "center_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "licenses_center_id_centers_id_fk": {
+          "name": "licenses_center_id_centers_id_fk",
+          "tableFrom": "licenses",
+          "tableTo": "centers",
+          "columnsFrom": [
+            "center_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
       "compositePrimaryKeys": {},
       "uniqueConstraints": {},
       "policies": {},
@@ -165,8 +483,8 @@
           "notNull": true,
           "default": "gen_random_uuid()"
         },
-        "partner_id": {
-          "name": "partner_id",
+        "center_id": {
+          "name": "center_id",
           "type": "uuid",
           "primaryKey": false,
           "notNull": false
@@ -222,14 +540,121 @@
           "default": true
         }
       },
+      "indexes": {
+        "products_center_idx": {
+          "name": "products_center_idx",
+          "columns": [
+            {
+              "expression": "center_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "products_center_id_centers_id_fk": {
+          "name": "products_center_id_centers_id_fk",
+          "tableFrom": "products",
+          "tableTo": "centers",
+          "columnsFrom": [
+            "center_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.result_emails": {
+      "name": "result_emails",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "scan_id": {
+          "name": "scan_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "center_id": {
+          "name": "center_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "to_email": {
+          "name": "to_email",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "status": {
+          "name": "status",
+          "type": "email_status",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "provider_id": {
+          "name": "provider_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "error": {
+          "name": "error",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
       "indexes": {},
       "foreignKeys": {
-        "products_partner_id_partners_id_fk": {
-          "name": "products_partner_id_partners_id_fk",
-          "tableFrom": "products",
-          "tableTo": "partners",
+        "result_emails_scan_id_scans_id_fk": {
+          "name": "result_emails_scan_id_scans_id_fk",
+          "tableFrom": "result_emails",
+          "tableTo": "scans",
           "columnsFrom": [
-            "partner_id"
+            "scan_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "result_emails_center_id_centers_id_fk": {
+          "name": "result_emails_center_id_centers_id_fk",
+          "tableFrom": "result_emails",
+          "tableTo": "centers",
+          "columnsFrom": [
+            "center_id"
           ],
           "columnsTo": [
             "id"
@@ -343,11 +768,23 @@
           "notNull": true,
           "default": "gen_random_uuid()"
         },
-        "user_id": {
-          "name": "user_id",
+        "center_id": {
+          "name": "center_id",
           "type": "uuid",
           "primaryKey": false,
           "notNull": true
+        },
+        "patient_id": {
+          "name": "patient_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "staff_id": {
+          "name": "staff_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
         },
         "image_data": {
           "name": "image_data",
@@ -399,6 +836,12 @@
           "primaryKey": false,
           "notNull": false
         },
+        "emailed_at": {
+          "name": "emailed_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
         "created_at": {
           "name": "created_at",
           "type": "timestamp with time zone",
@@ -408,11 +851,11 @@
         }
       },
       "indexes": {
-        "scans_user_created_idx": {
-          "name": "scans_user_created_idx",
+        "scans_center_created_idx": {
+          "name": "scans_center_created_idx",
           "columns": [
             {
-              "expression": "user_id",
+              "expression": "center_id",
               "isExpression": false,
               "asc": true,
               "nulls": "last"
@@ -428,73 +871,61 @@
           "concurrently": false,
           "method": "btree",
           "with": {}
+        },
+        "scans_patient_idx": {
+          "name": "scans_patient_idx",
+          "columns": [
+            {
+              "expression": "patient_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
         }
       },
       "foreignKeys": {
-        "scans_user_id_users_id_fk": {
-          "name": "scans_user_id_users_id_fk",
+        "scans_center_id_centers_id_fk": {
+          "name": "scans_center_id_centers_id_fk",
           "tableFrom": "scans",
-          "tableTo": "users",
+          "tableTo": "centers",
           "columnsFrom": [
-            "user_id"
+            "center_id"
           ],
           "columnsTo": [
             "id"
           ],
           "onDelete": "cascade",
           "onUpdate": "no action"
-        }
-      },
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {},
-      "policies": {},
-      "checkConstraints": {},
-      "isRLSEnabled": false
-    },
-    "public.sessions": {
-      "name": "sessions",
-      "schema": "",
-      "columns": {
-        "id": {
-          "name": "id",
-          "type": "uuid",
-          "primaryKey": true,
-          "notNull": true,
-          "default": "gen_random_uuid()"
         },
-        "user_id": {
-          "name": "user_id",
-          "type": "uuid",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "created_at": {
-          "name": "created_at",
-          "type": "timestamp with time zone",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "now()"
-        },
-        "expires_at": {
-          "name": "expires_at",
-          "type": "timestamp with time zone",
-          "primaryKey": false,
-          "notNull": true
-        }
-      },
-      "indexes": {},
-      "foreignKeys": {
-        "sessions_user_id_users_id_fk": {
-          "name": "sessions_user_id_users_id_fk",
-          "tableFrom": "sessions",
+        "scans_patient_id_users_id_fk": {
+          "name": "scans_patient_id_users_id_fk",
+          "tableFrom": "scans",
           "tableTo": "users",
           "columnsFrom": [
-            "user_id"
+            "patient_id"
           ],
           "columnsTo": [
             "id"
           ],
           "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "scans_staff_id_users_id_fk": {
+          "name": "scans_staff_id_users_id_fk",
+          "tableFrom": "scans",
+          "tableTo": "users",
+          "columnsFrom": [
+            "staff_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "set null",
           "onUpdate": "no action"
         }
       },
@@ -552,6 +983,12 @@
           "primaryKey": false,
           "notNull": false
         },
+        "notes": {
+          "name": "notes",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
         "updated_at": {
           "name": "updated_at",
           "type": "timestamp with time zone",
@@ -605,19 +1042,7 @@
           "name": "email",
           "type": "text",
           "primaryKey": false,
-          "notNull": false
-        },
-        "phone": {
-          "name": "phone",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "password_hash": {
-          "name": "password_hash",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
+          "notNull": true
         },
         "name": {
           "name": "name",
@@ -627,19 +1052,36 @@
         },
         "role": {
           "name": "role",
-          "type": "user_role",
+          "type": "role",
           "typeSchema": "public",
           "primaryKey": false,
           "notNull": true,
-          "default": "'user'"
+          "default": "'patient'"
         },
-        "plan": {
-          "name": "plan",
-          "type": "plan",
-          "typeSchema": "public",
+        "center_id": {
+          "name": "center_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "google_id": {
+          "name": "google_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "image": {
+          "name": "image",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "activated": {
+          "name": "activated",
+          "type": "boolean",
           "primaryKey": false,
           "notNull": true,
-          "default": "'free'"
+          "default": false
         },
         "lang": {
           "name": "lang",
@@ -648,12 +1090,6 @@
           "primaryKey": false,
           "notNull": true,
           "default": "'fr'"
-        },
-        "partner_id": {
-          "name": "partner_id",
-          "type": "uuid",
-          "primaryKey": false,
-          "notNull": false
         },
         "consent_at": {
           "name": "consent_at",
@@ -667,22 +1103,8 @@
           "primaryKey": false,
           "notNull": false
         },
-        "onboarding_completed": {
-          "name": "onboarding_completed",
-          "type": "boolean",
-          "primaryKey": false,
-          "notNull": true,
-          "default": false
-        },
         "notify_routine": {
           "name": "notify_routine",
-          "type": "boolean",
-          "primaryKey": false,
-          "notNull": true,
-          "default": true
-        },
-        "notify_scan": {
-          "name": "notify_scan",
           "type": "boolean",
           "primaryKey": false,
           "notNull": true,
@@ -697,11 +1119,26 @@
         }
       },
       "indexes": {
-        "users_partner_idx": {
-          "name": "users_partner_idx",
+        "users_center_idx": {
+          "name": "users_center_idx",
           "columns": [
             {
-              "expression": "partner_id",
+              "expression": "center_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "users_role_idx": {
+          "name": "users_role_idx",
+          "columns": [
+            {
+              "expression": "role",
               "isExpression": false,
               "asc": true,
               "nulls": "last"
@@ -714,12 +1151,12 @@
         }
       },
       "foreignKeys": {
-        "users_partner_id_partners_id_fk": {
-          "name": "users_partner_id_partners_id_fk",
+        "users_center_id_centers_id_fk": {
+          "name": "users_center_id_centers_id_fk",
           "tableFrom": "users",
-          "tableTo": "partners",
+          "tableTo": "centers",
           "columnsFrom": [
-            "partner_id"
+            "center_id"
           ],
           "columnsTo": [
             "id"
@@ -737,11 +1174,11 @@
             "email"
           ]
         },
-        "users_phone_unique": {
-          "name": "users_phone_unique",
+        "users_google_id_unique": {
+          "name": "users_google_id_unique",
           "nullsNotDistinct": false,
           "columns": [
-            "phone"
+            "google_id"
           ]
         }
       },
@@ -751,6 +1188,24 @@
     }
   },
   "enums": {
+    "public.appointment_status": {
+      "name": "appointment_status",
+      "schema": "public",
+      "values": [
+        "scheduled",
+        "completed",
+        "cancelled",
+        "no_show"
+      ]
+    },
+    "public.email_status": {
+      "name": "email_status",
+      "schema": "public",
+      "values": [
+        "sent",
+        "failed"
+      ]
+    },
     "public.lang": {
       "name": "lang",
       "schema": "public",
@@ -759,12 +1214,33 @@
         "en"
       ]
     },
-    "public.plan": {
-      "name": "plan",
+    "public.license_plan": {
+      "name": "license_plan",
       "schema": "public",
       "values": [
-        "free",
-        "premium"
+        "trial",
+        "starter",
+        "pro",
+        "unlimited"
+      ]
+    },
+    "public.license_status": {
+      "name": "license_status",
+      "schema": "public",
+      "values": [
+        "active",
+        "suspended",
+        "expired"
+      ]
+    },
+    "public.role": {
+      "name": "role",
+      "schema": "public",
+      "values": [
+        "admin",
+        "center_admin",
+        "staff",
+        "patient"
       ]
     },
     "public.scan_status": {
@@ -784,15 +1260,6 @@
         "low",
         "medium",
         "high"
-      ]
-    },
-    "public.user_role": {
-      "name": "user_role",
-      "schema": "public",
-      "values": [
-        "user",
-        "pro",
-        "admin"
       ]
     }
   },

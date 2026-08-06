@@ -1,89 +1,63 @@
-# SkinScan — PWA de diagnostic cutané par IA
+# SkinScan — Plateforme B2B de diagnostic cutané par IA
 
-Progressive Web App installable qui analyse la peau du visage via **Gemini
-(vision)**, génère une **routine skincare personnalisée**, et suit la
-progression dans le temps. Mobile-first avec navigation façon app native
-(bottom nav), et vraie adaptation desktop (sidebar + layouts élargis).
+SaaS multi-tenant vendu **sous licence à des centres de beauté**. Trois espaces :
 
-> ⚕️ **Cosmétique uniquement** — aucun diagnostic médical ou pathologique.
+- **Admin** (`/admin`) — l'éditeur gère les centres et leurs licences.
+- **Centre** (`/center`) — chaque centre scanne ses patients (Gemini vision),
+  envoie les résultats **par email** (Resend), suit patients & rendez-vous.
+- **Patient** (`/me`) — connexion **Google**, consulte ses résultats, sa
+  routine et ses rendez-vous après consultation.
+
+> ⚕️ Analyse **cosmétique** uniquement — aucun diagnostic médical.
 
 ## Stack
 
-| Domaine | Choix |
-|---|---|
-| Framework | **Next.js 15** (App Router, RSC) + TypeScript |
-| UI | **Tailwind CSS**, composants maison, icônes SVG inline |
-| Base de données | **Neon** (Postgres serverless) via **Drizzle ORM** |
-| IA vision | **Google Gemini** (`@google/generative-ai`) |
-| Auth | Cookie de session signé (`jose`) + `bcryptjs` |
-| Graphiques | **Recharts** |
-| Hébergement | **Vercel** (ou Render) |
+Next.js 15 (App Router) · TypeScript · Tailwind · **Neon** (Postgres) + Drizzle
+ORM · **Gemini** vision · **Resend** email · OAuth **Google** maison + session
+JWT (`jose`) · Recharts · PWA (service worker + manifest).
 
-## Parcours (3 taps pour un scan)
+## Rôles & isolation
 
-`Accueil → Scanner → (capture) → Résultats → Routine`
+`admin | center_admin | staff | patient` (colonne `users.role`). Chaque donnée
+(patient, scan, RDV) porte un `center_id` : un centre ne voit que ses données.
+Le rôle est résolu au login Google (`SUPER_ADMIN_EMAILS`, invitations centre,
+patients créés par un centre). Voir `src/middleware.ts` (garde par rôle).
 
-- **Onboarding** : bienvenue → inscription → **consentement données** (obligatoire,
-  donnée sensible) → questionnaire profil peau (quiz) → 1er scan.
-- **Scan** : caméra avec cadre ovale + conseils en direct → **contrôle qualité
-  local** (luminosité / netteté / visage) → compression → Gemini → résultats
-  (score global + détail par critère) → routine matin/soir.
-- **Historique** : liste, détail, **comparaison avant/après**, courbe de progression.
-- **Profil** : profil peau, quota/abonnement, notifications, langue FR/EN,
-  confidentialité (export / suppression), aide (WhatsApp).
+## Flux principal
 
-## Fonctionnalités transverses
+`Centre crée un patient → le scanne → Gemini analyse → routine générée →
+"Envoyer au patient" (Resend) → le patient se connecte en Google (même email)
+et retrouve résultats + routine + rendez-vous.`
 
-- **PWA** installable : `manifest.json`, icônes (192/512/maskable), service
-  worker (`public/sw.js`) avec **fallback hors-ligne** + support **push**.
-- **Compression image côté client** + **retry réseau** automatique.
-- **Contrôle qualité avant envoi** : jamais d'appel Gemini inutile (économie API).
-- **Quota freemium** : compteur mensuel visible (`FREE_SCANS_PER_MONTH`).
-- **Multilingue FR/EN** dès la structure (langue stockée en base).
-- **Partage opt-in** + gestion des **données sensibles** (consentement, effacement).
-- **États vides** soignés sur chaque écran.
+## Variables d'environnement
 
-## Espace Partenaire Pro (Phase 2)
+Voir `.env.example`. Clés : `DATABASE_URL`, `GEMINI_API_KEY`, `RESEND_API_KEY`,
+`RESEND_FROM`, `AUTH_SECRET`, `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`,
+`SUPER_ADMIN_EMAILS`, `NEXT_PUBLIC_APP_URL`.
 
-Non développé en v1, mais **l'architecture est posée** : tables `partners`,
-`products`, `partner_transactions`, colonne `users.partner_id`, et un tableau de
-bord scaffold role-gated (`/pro`) avec statistiques agrégées. Aucune refonte du
-schéma ne sera nécessaire pour l'activer.
+## Déploiement Vercel
 
-## Configuration
+1. Importer le repo dans Vercel.
+2. Renseigner toutes les variables d'environnement.
+3. Déployer. Le build lance automatiquement les migrations Neon
+   (`next build && npm run db:migrate`, voir `vercel.json`).
+4. Créer le client **OAuth Google** avec l'URI de redirection
+   `<NEXT_PUBLIC_APP_URL>/api/auth/google/callback`, puis renseigner
+   `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` et redéployer.
+5. Se connecter avec un email listé dans `SUPER_ADMIN_EMAILS` → espace Admin.
 
-1. `cp .env.example .env` puis remplir :
-   - `DATABASE_URL` — chaîne *pooled* Neon
-   - `GEMINI_API_KEY` — clé Google AI Studio (`GEMINI_MODEL` optionnel)
-   - `AUTH_SECRET` — `openssl rand -base64 32`
-2. Installer & préparer la base :
+En local : `cp .env.example .env`, remplir, `npm install`, `npm run db:migrate`,
+`npm run dev`.
 
-```bash
-npm install
-npm run db:push     # crée les tables sur Neon
-npm run db:seed     # catalogue produits générique (optionnel)
-npm run dev
-```
+## Schéma
 
-Ouvrir http://localhost:3000. Le service worker n'est actif qu'en build de
-production (`npm run build && npm start`).
-
-## Déploiement (Vercel)
-
-1. Importer le repo sur Vercel.
-2. Renseigner les variables d'environnement (mêmes que `.env`).
-3. Deploy. Lancer `npm run db:push` une fois contre la base de prod.
-
-## Schéma de base
-
-`users`, `skin_profiles`, `scans`, `scan_metrics`, `products`, `partners`,
-`partner_transactions`, `sessions`. Voir `src/lib/db/schema.ts`.
+`centers`, `licenses`, `users`, `skin_profiles`, `scans`, `scan_metrics`,
+`appointments`, `result_emails`, `products`, `license_transactions`.
+Migrations versionnées dans `drizzle/`.
 
 ## Pipeline Gemini
 
-1. Image compressée (base64) + prompt structuré → **JSON strict**
-   (score global, 7 critères, sévérité, zone, explication).
-2. Réponse normalisée/validée (`src/lib/gemini.ts`) → stockée (Neon).
-3. Routine générée par **règles-métier** déterministes (`src/lib/routine.ts`)
-   — coût nul, résultat fiable et reproductible.
-4. Aucun appel si le contrôle qualité image échoue.
+Image compressée (base64) + contrôle qualité **côté client** (jamais d'appel
+Gemini inutile) → prompt JSON strict (score global + 7 critères, sévérité,
+zone, explication) normalisé (`src/lib/gemini.ts`) → routine par règles-métier
+(`src/lib/routine.ts`).

@@ -8,88 +8,145 @@ import {
   jsonb,
   pgEnum,
   index,
-  real,
 } from "drizzle-orm/pg-core";
 import { relations, sql } from "drizzle-orm";
+
+// ===========================================================================
+// SkinScan B2B — plateforme multi-tenant vendue sous licence à des centres.
+// Rôles : admin (éditeur) · center_admin / staff (centre) · patient.
+// Isolation : (presque) toute donnée porte un center_id.
+// ===========================================================================
 
 // ---------------------------------------------------------------------------
 // Enums
 // ---------------------------------------------------------------------------
 
-export const userRoleEnum = pgEnum("user_role", ["user", "pro", "admin"]);
-export const planEnum = pgEnum("plan", ["free", "premium"]);
-export const langEnum = pgEnum("lang", ["fr", "en"]);
+export const roleEnum = pgEnum("role", [
+  "admin", // super-admin plateforme (toi)
+  "center_admin", // propriétaire / gérant d'un centre
+  "staff", // esthéticien·ne d'un centre
+  "patient", // client scanné dans un centre
+]);
+
+export const licensePlanEnum = pgEnum("license_plan", [
+  "trial",
+  "starter",
+  "pro",
+  "unlimited",
+]);
+
+export const licenseStatusEnum = pgEnum("license_status", [
+  "active",
+  "suspended",
+  "expired",
+]);
+
 export const scanStatusEnum = pgEnum("scan_status", [
   "pending",
   "analyzed",
   "failed",
 ]);
-// Sévérité normalisée renvoyée par l'analyse IA.
+
 export const severityEnum = pgEnum("severity", ["none", "low", "medium", "high"]);
 
+export const appointmentStatusEnum = pgEnum("appointment_status", [
+  "scheduled",
+  "completed",
+  "cancelled",
+  "no_show",
+]);
+
+export const emailStatusEnum = pgEnum("email_status", ["sent", "failed"]);
+
+export const langEnum = pgEnum("lang", ["fr", "en"]);
+
 // ---------------------------------------------------------------------------
-// Organisations partenaires (Pharmacie / salon / clinique) — Phase 2.
-// Présentes dès la v1 pour éviter une refonte du schéma plus tard.
+// Centres de beauté (tenants)
 // ---------------------------------------------------------------------------
 
-export const partners = pgTable("partners", {
+export const centers = pgTable("centers", {
   id: uuid("id").defaultRandom().primaryKey(),
   name: text("name").notNull(),
-  type: text("type").notNull().default("pharmacy"), // pharmacy | salon | clinic
+  type: text("type").notNull().default("beauty_center"), // beauty_center | pharmacy | clinic | spa
+  city: text("city"),
   contactEmail: text("contact_email"),
   contactPhone: text("contact_phone"),
-  // Crédits de scans achetés (rechargeables via Mobile Money en phase 2).
-  scanCredits: integer("scan_credits").notNull().default(0),
+  logoUrl: text("logo_url"), // utilisé en en-tête des emails
+  brandColor: text("brand_color").default("#d95b3c"),
   active: boolean("active").notNull().default(true),
-  createdAt: timestamp("created_at", { withTimezone: true })
-    .notNull()
-    .defaultNow(),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });
 
 // ---------------------------------------------------------------------------
-// Utilisateurs
+// Licences (émises par l'admin, une par centre "courante")
+// ---------------------------------------------------------------------------
+
+export const licenses = pgTable(
+  "licenses",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    centerId: uuid("center_id")
+      .notNull()
+      .references(() => centers.id, { onDelete: "cascade" }),
+    plan: licensePlanEnum("plan").notNull().default("trial"),
+    status: licenseStatusEnum("status").notNull().default("active"),
+    // Quota de scans par mois (null = illimité).
+    monthlyScanQuota: integer("monthly_scan_quota").default(50),
+    // Nombre max de comptes staff.
+    maxStaff: integer("max_staff").default(3),
+    priceCents: integer("price_cents"),
+    currency: text("currency").default("XAF"),
+    startsAt: timestamp("starts_at", { withTimezone: true }).notNull().defaultNow(),
+    expiresAt: timestamp("expires_at", { withTimezone: true }),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => ({
+    centerIdx: index("licenses_center_idx").on(t.centerId),
+  }),
+);
+
+// ---------------------------------------------------------------------------
+// Utilisateurs (tous rôles). Un patient est créé par un centre ; il "active"
+// son compte au 1er login Google (match par email).
 // ---------------------------------------------------------------------------
 
 export const users = pgTable(
   "users",
   {
     id: uuid("id").defaultRandom().primaryKey(),
-    email: text("email").unique(),
-    phone: text("phone").unique(),
-    passwordHash: text("password_hash"),
+    email: text("email").notNull().unique(),
     name: text("name"),
-    role: userRoleEnum("role").notNull().default("user"),
-    plan: planEnum("plan").notNull().default("free"),
-    lang: langEnum("lang").notNull().default("fr"),
+    role: roleEnum("role").notNull().default("patient"),
 
-    // Rattachement optionnel à un partenaire Pro (client d'une pharmacie…).
-    partnerId: uuid("partner_id").references(() => partners.id, {
+    centerId: uuid("center_id").references(() => centers.id, {
       onDelete: "set null",
     }),
+
+    // Auth Google.
+    googleId: text("google_id").unique(),
+    image: text("image"),
+
+    // Un patient créé par le centre mais pas encore connecté = pas encore "actif".
+    activated: boolean("activated").notNull().default(false),
+
+    lang: langEnum("lang").notNull().default("fr"),
 
     // Consentement données sensibles (photo de visage).
     consentAt: timestamp("consent_at", { withTimezone: true }),
     consentVersion: text("consent_version"),
 
-    onboardingCompleted: boolean("onboarding_completed")
-      .notNull()
-      .default(false),
-
-    // Préférences de notifications.
     notifyRoutine: boolean("notify_routine").notNull().default(true),
-    notifyScan: boolean("notify_scan").notNull().default(true),
 
-    createdAt: timestamp("created_at", { withTimezone: true })
-      .notNull()
-      .defaultNow(),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (t) => ({
-    partnerIdx: index("users_partner_idx").on(t.partnerId),
+    centerIdx: index("users_center_idx").on(t.centerId),
+    roleIdx: index("users_role_idx").on(t.role),
   }),
 );
 
 // ---------------------------------------------------------------------------
-// Profil peau (issu du questionnaire d'onboarding, modifiable).
+// Profil peau (par patient)
 // ---------------------------------------------------------------------------
 
 export const skinProfiles = pgTable("skin_profiles", {
@@ -98,60 +155,52 @@ export const skinProfiles = pgTable("skin_profiles", {
     .notNull()
     .unique()
     .references(() => users.id, { onDelete: "cascade" }),
-  skinType: text("skin_type"), // oily | dry | combination | sensitive | unknown
-  ageRange: text("age_range"), // "<18" | "18-24" | "25-34" | "35-44" | "45-54" | "55+"
-  // Préoccupations (choix multiples) : acne, dark_spots, wrinkles, pores, redness, dullness
+  skinType: text("skin_type"),
+  ageRange: text("age_range"),
   concerns: jsonb("concerns").$type<string[]>().notNull().default(sql`'[]'::jsonb`),
   allergies: text("allergies"),
-  currentRoutine: text("current_routine"), // none | basic | complete
-  updatedAt: timestamp("updated_at", { withTimezone: true })
-    .notNull()
-    .defaultNow(),
+  currentRoutine: text("current_routine"),
+  notes: text("notes"), // notes internes du centre (non visibles patient)
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
 });
 
 // ---------------------------------------------------------------------------
-// Scans
+// Scans (réalisés par un centre pour un patient)
 // ---------------------------------------------------------------------------
 
 export const scans = pgTable(
   "scans",
   {
     id: uuid("id").defaultRandom().primaryKey(),
-    userId: uuid("user_id")
+    centerId: uuid("center_id")
+      .notNull()
+      .references(() => centers.id, { onDelete: "cascade" }),
+    patientId: uuid("patient_id")
       .notNull()
       .references(() => users.id, { onDelete: "cascade" }),
+    staffId: uuid("staff_id").references(() => users.id, { onDelete: "set null" }),
 
-    // Image stockée en data URL (base64). En production on brancherait un
-    // object storage (Vercel Blob / S3) — la colonne resterait la référence.
     imageData: text("image_data"),
     thumbnailData: text("thumbnail_data"),
 
     status: scanStatusEnum("status").notNull().default("pending"),
-
-    // Score global de santé de la peau (0-100).
     overallScore: integer("overall_score"),
-
-    // Résultat brut normalisé de l'analyse : { metrics: [...], summary, ... }
     analysis: jsonb("analysis").$type<ScanAnalysis>(),
-
-    // Routine générée à partir de l'analyse + profil.
     routine: jsonb("routine").$type<Routine>(),
-
-    // Métadonnées de qualité image (mesurées côté client).
-    quality: jsonb("quality").$type<Record<string, number>>(),
-
+    quality: jsonb("quality").$type<Record<string, number | boolean | string>>(),
     errorMessage: text("error_message"),
 
-    createdAt: timestamp("created_at", { withTimezone: true })
-      .notNull()
-      .defaultNow(),
+    // Traçabilité de l'envoi email au patient.
+    emailedAt: timestamp("emailed_at", { withTimezone: true }),
+
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (t) => ({
-    userCreatedIdx: index("scans_user_created_idx").on(t.userId, t.createdAt),
+    centerCreatedIdx: index("scans_center_created_idx").on(t.centerId, t.createdAt),
+    patientIdx: index("scans_patient_idx").on(t.patientId),
   }),
 );
 
-// Détail par catégorie de problème détecté.
 export const scanMetrics = pgTable(
   "scan_metrics",
   {
@@ -159,11 +208,10 @@ export const scanMetrics = pgTable(
     scanId: uuid("scan_id")
       .notNull()
       .references(() => scans.id, { onDelete: "cascade" }),
-    // acne | dark_spots | wrinkles | pores | redness | hydration | evenness
     category: text("category").notNull(),
-    score: integer("score").notNull(), // 0-100 (100 = parfait)
+    score: integer("score").notNull(),
     severity: severityEnum("severity").notNull().default("none"),
-    zone: text("zone"), // front | joues | nez | menton | contour_yeux | global
+    zone: text("zone"),
     explanation: text("explanation"),
   },
   (t) => ({
@@ -172,100 +220,134 @@ export const scanMetrics = pgTable(
 );
 
 // ---------------------------------------------------------------------------
-// Catalogue produits (partenaire ou générique) — recommandations.
+// Rendez-vous (gérés par le centre, consultés par le patient)
 // ---------------------------------------------------------------------------
 
-export const products = pgTable("products", {
-  id: uuid("id").defaultRandom().primaryKey(),
-  partnerId: uuid("partner_id").references(() => partners.id, {
-    onDelete: "cascade",
+export const appointments = pgTable(
+  "appointments",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    centerId: uuid("center_id")
+      .notNull()
+      .references(() => centers.id, { onDelete: "cascade" }),
+    patientId: uuid("patient_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    staffId: uuid("staff_id").references(() => users.id, { onDelete: "set null" }),
+    scanId: uuid("scan_id").references(() => scans.id, { onDelete: "set null" }),
+
+    scheduledAt: timestamp("scheduled_at", { withTimezone: true }).notNull(),
+    durationMin: integer("duration_min").default(45),
+    status: appointmentStatusEnum("status").notNull().default("scheduled"),
+    reason: text("reason"),
+    notes: text("notes"),
+
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => ({
+    centerSchedIdx: index("appointments_center_sched_idx").on(t.centerId, t.scheduledAt),
+    patientIdx: index("appointments_patient_idx").on(t.patientId),
   }),
-  name: text("name").notNull(),
-  category: text("category").notNull(), // cleanser | serum | moisturizer | spf | treatment
-  // Ingrédient clé (mapping problème → ingrédient) : niacinamide, retinol, spf…
-  keyIngredient: text("key_ingredient"),
-  targetsConcern: text("targets_concern"), // acne | dark_spots | ...
-  description: text("description"),
-  priceCents: integer("price_cents"),
-  currency: text("currency").default("XAF"),
-  active: boolean("active").notNull().default(true),
+);
+
+// ---------------------------------------------------------------------------
+// Emails de résultats envoyés (audit)
+// ---------------------------------------------------------------------------
+
+export const resultEmails = pgTable("result_emails", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  scanId: uuid("scan_id")
+    .notNull()
+    .references(() => scans.id, { onDelete: "cascade" }),
+  centerId: uuid("center_id")
+    .notNull()
+    .references(() => centers.id, { onDelete: "cascade" }),
+  toEmail: text("to_email").notNull(),
+  status: emailStatusEnum("status").notNull(),
+  providerId: text("provider_id"),
+  error: text("error"),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });
 
 // ---------------------------------------------------------------------------
-// Facturation / crédits partenaires — Phase 2 (structure présente en v1).
+// Catalogue produits (par centre) — recommandations priorisées
 // ---------------------------------------------------------------------------
 
-export const partnerTransactions = pgTable("partner_transactions", {
+export const products = pgTable(
+  "products",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    centerId: uuid("center_id").references(() => centers.id, { onDelete: "cascade" }),
+    name: text("name").notNull(),
+    category: text("category").notNull(),
+    keyIngredient: text("key_ingredient"),
+    targetsConcern: text("targets_concern"),
+    description: text("description"),
+    priceCents: integer("price_cents"),
+    currency: text("currency").default("XAF"),
+    active: boolean("active").notNull().default(true),
+  },
+  (t) => ({
+    centerIdx: index("products_center_idx").on(t.centerId),
+  }),
+);
+
+// ---------------------------------------------------------------------------
+// Transactions licences (facturation / recharge — phase 2)
+// ---------------------------------------------------------------------------
+
+export const licenseTransactions = pgTable("license_transactions", {
   id: uuid("id").defaultRandom().primaryKey(),
-  partnerId: uuid("partner_id")
+  centerId: uuid("center_id")
     .notNull()
-    .references(() => partners.id, { onDelete: "cascade" }),
-  kind: text("kind").notNull(), // topup | usage | refund
-  amountCredits: integer("amount_credits").notNull(),
+    .references(() => centers.id, { onDelete: "cascade" }),
+  licenseId: uuid("license_id").references(() => licenses.id, { onDelete: "set null" }),
+  kind: text("kind").notNull(), // subscription | topup | refund
   amountMoneyCents: integer("amount_money_cents"),
   currency: text("currency").default("XAF"),
-  provider: text("provider"), // mtn_momo | orange_money | ...
+  provider: text("provider"), // mtn_momo | orange_money | manual
   reference: text("reference"),
-  createdAt: timestamp("created_at", { withTimezone: true })
-    .notNull()
-    .defaultNow(),
-});
-
-// ---------------------------------------------------------------------------
-// Sessions (auth par cookie signé — la table sert d'audit/révocation légère).
-// ---------------------------------------------------------------------------
-
-export const sessions = pgTable("sessions", {
-  id: uuid("id").defaultRandom().primaryKey(),
-  userId: uuid("user_id")
-    .notNull()
-    .references(() => users.id, { onDelete: "cascade" }),
-  createdAt: timestamp("created_at", { withTimezone: true })
-    .notNull()
-    .defaultNow(),
-  expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });
 
 // ---------------------------------------------------------------------------
 // Relations
 // ---------------------------------------------------------------------------
 
+export const centersRelations = relations(centers, ({ many, one }) => ({
+  users: many(users),
+  scans: many(scans),
+  appointments: many(appointments),
+  products: many(products),
+  license: one(licenses, { fields: [centers.id], references: [licenses.centerId] }),
+}));
+
 export const usersRelations = relations(users, ({ one, many }) => ({
-  profile: one(skinProfiles, {
-    fields: [users.id],
-    references: [skinProfiles.userId],
-  }),
-  partner: one(partners, {
-    fields: [users.partnerId],
-    references: [partners.id],
-  }),
+  center: one(centers, { fields: [users.centerId], references: [centers.id] }),
+  profile: one(skinProfiles, { fields: [users.id], references: [skinProfiles.userId] }),
   scans: many(scans),
 }));
 
 export const scansRelations = relations(scans, ({ one, many }) => ({
-  user: one(users, { fields: [scans.userId], references: [users.id] }),
+  center: one(centers, { fields: [scans.centerId], references: [centers.id] }),
+  patient: one(users, { fields: [scans.patientId], references: [users.id] }),
   metrics: many(scanMetrics),
 }));
 
-export const scanMetricsRelations = relations(scanMetrics, ({ one }) => ({
-  scan: one(scans, { fields: [scanMetrics.scanId], references: [scans.id] }),
-}));
-
-export const partnersRelations = relations(partners, ({ many }) => ({
-  users: many(users),
-  products: many(products),
-  transactions: many(partnerTransactions),
+export const appointmentsRelations = relations(appointments, ({ one }) => ({
+  center: one(centers, { fields: [appointments.centerId], references: [centers.id] }),
+  patient: one(users, { fields: [appointments.patientId], references: [users.id] }),
 }));
 
 // ---------------------------------------------------------------------------
-// Types partagés (analyse & routine) — utilisés côté API et UI.
+// Types partagés (analyse & routine)
 // ---------------------------------------------------------------------------
 
 export type Severity = "none" | "low" | "medium" | "high";
 
 export interface ScanMetricResult {
   category: string;
-  score: number; // 0-100
+  score: number;
   severity: Severity;
   zone: string;
   explanation: string;
@@ -279,7 +361,7 @@ export interface ScanAnalysis {
 
 export interface RoutineStep {
   order: number;
-  category: string; // cleanser | serum | moisturizer | spf | treatment
+  category: string;
   title: string;
   reason: string;
   keyIngredient?: string;
