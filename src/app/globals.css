@@ -1,0 +1,63 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --font-sans: "Inter", system-ui, -apple-system, sans-serif;
+}
+
+html,
+body {
+  height: 100%;
+}
+
+body {
+  @apply bg-sand-50 text-ink antialiased;
+  -webkit-tap-highlight-color: transparent;
+  overscroll-behavior-y: none;
+}
+
+/* Zones sûres iOS (encoche, barre home) pour la bottom nav. */
+.pb-safe {
+  padding-bottom: calc(env(safe-area-inset-bottom, 0px));
+}
+.h-safe-nav {
+  height: calc(64px + env(safe-area-inset-bottom, 0px));
+}
+
+@layer components {
+  .btn-primary {
+    @apply inline-flex items-center justify-center gap-2 rounded-2xl bg-brand-500 px-6 py-3.5
+           font-semibold text-white shadow-soft transition active:scale-[0.98]
+           disabled:opacity-50 disabled:pointer-events-none hover:bg-brand-600;
+  }
+  .btn-ghost {
+    @apply inline-flex items-center justify-center gap-2 rounded-2xl border border-sand-200
+           bg-white px-6 py-3.5 font-semibold text-ink transition active:scale-[0.98]
+           hover:bg-sand-50;
+  }
+  .card {
+    @apply rounded-3xl bg-white p-5 shadow-soft;
+  }
+  .field {
+    @apply w-full rounded-2xl border border-sand-200 bg-white px-4 py-3 text-ink
+           outline-none transition placeholder:text-ink-faint focus:border-brand-400
+           focus:ring-2 focus:ring-brand-100;
+  }
+  .chip {
+    @apply cursor-pointer select-none rounded-2xl border-2 border-sand-200 bg-white px-4 py-3
+           text-center font-medium text-ink-soft transition active:scale-[0.98];
+  }
+  .chip-active {
+    @apply border-brand-400 bg-brand-50 text-brand-700;
+  }
+}
+
+/* Barre de défilement discrète sur desktop. */
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+::-webkit-scrollbar-thumb {
+  @apply rounded-full bg-sand-200;
+}

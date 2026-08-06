@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>SkinScan — Hors-ligne</title>
+    <style>
+      body {
+        margin: 0;
+        font-family: system-ui, -apple-system, sans-serif;
+        background: #faf7f4;
+        color: #2a2320;
+        display: grid;
+        place-items: center;
+        height: 100vh;
+        text-align: center;
+        padding: 24px;
+      }
+      .logo {
+        width: 72px;
+        height: 72px;
+        border-radius: 20px;
+        background: linear-gradient(135deg, #e57a5c, #d95b3c);
+        display: grid;
+        place-items: center;
+        color: #fff;
+        font-size: 34px;
+        margin: 0 auto 20px;
+      }
+      h1 { font-size: 20px; margin: 0 0 8px; }
+      p { color: #6b615b; max-width: 320px; margin: 0 auto; line-height: 1.5; }
+      button {
+        margin-top: 24px;
+        border: 0;
+        background: #d95b3c;
+        color: #fff;
+        font-weight: 600;
+        padding: 14px 28px;
+        border-radius: 16px;
+        font-size: 16px;
+      }
+    </style>
+  </head>
+  <body>
+    <div>
+      <div class="logo">✦</div>
+      <h1>Vous êtes hors-ligne</h1>
+      <p>
+        SkinScan a besoin d'une connexion pour analyser votre peau. Vos scans
+        déjà chargés restent consultables. Reconnectez-vous pour continuer.
+      </p>
+      <button onclick="location.href='/'">Réessayer</button>
+    </div>
+  </body>
+</html>
