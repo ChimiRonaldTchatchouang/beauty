@@ -1,11 +1,18 @@
 "use server";
 
+import { randomBytes } from "node:crypto";
 import { db } from "@/lib/db";
 import { centers, licenses, users } from "@/lib/db/schema";
 import { and, eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
-import { getSession } from "@/lib/auth";
+import { getSession, hashPassword } from "@/lib/auth";
+import { sendEmail, centerInviteEmailHtml, emailConfigured } from "@/lib/email";
 import type { ActionResult } from "./center";
+
+function tempPassword(): string {
+  // 8 caractères lisibles (base64url sans caractères ambigus).
+  return randomBytes(6).toString("base64url").replace(/[-_]/g, "").slice(0, 8) + "42";
+}
 
 async function requireAdmin() {
   const session = await getSession();
@@ -22,8 +29,15 @@ const PLAN_DEFAULTS: Record<Plan, { quota: number | null; maxStaff: number }> = 
   unlimited: { quota: null, maxStaff: 50 },
 };
 
-/** Crée un centre + sa licence initiale + invite son gérant (par email Google). */
-export async function createCenter(formData: FormData): Promise<ActionResult> {
+export interface CreateCenterResult extends ActionResult {
+  tempPassword?: string;
+  email?: string;
+  emailSent?: boolean;
+  emailError?: string;
+}
+
+/** Crée un centre + sa licence initiale + invite son gérant (email + mot de passe). */
+export async function createCenter(formData: FormData): Promise<CreateCenterResult> {
   await requireAdmin();
   const name = String(formData.get("name") ?? "").trim();
   const adminEmail = String(formData.get("adminEmail") ?? "").trim().toLowerCase();
@@ -54,24 +68,46 @@ export async function createCenter(formData: FormData): Promise<ActionResult> {
     expiresAt,
   });
 
-  // Invitation du gérant : on crée (ou rattache) l'utilisateur center_admin.
+  // Invitation du gérant : on crée (ou rattache) l'utilisateur center_admin
+  // avec un mot de passe temporaire (connexion email + mot de passe).
+  const password = tempPassword();
+  const passwordHash = await hashPassword(password);
   const [existing] = await db.select().from(users).where(eq(users.email, adminEmail)).limit(1);
   if (existing) {
     await db
       .update(users)
-      .set({ role: "center_admin", centerId: center.id })
+      .set({ role: "center_admin", centerId: center.id, passwordHash })
       .where(eq(users.id, existing.id));
   } else {
     await db.insert(users).values({
       email: adminEmail,
+      name: "Gérant",
       role: "center_admin",
       centerId: center.id,
       activated: false,
+      passwordHash,
     });
   }
 
+  // Email d'invitation avec les accès (+ repli : le mot de passe est renvoyé
+  // à l'admin pour affichage/partage si l'email n'arrive pas).
+  const loginUrl = (process.env.NEXT_PUBLIC_APP_URL?.replace(/\/$/, "") ?? "") + "/login";
+  let emailSent = false;
+  let emailError: string | undefined;
+  if (emailConfigured()) {
+    const res = await sendEmail({
+      to: adminEmail,
+      subject: `Vos accès SkinScan — ${name}`,
+      html: centerInviteEmailHtml({ centerName: name, loginUrl, email: adminEmail, password }),
+    });
+    emailSent = res.ok;
+    if (!res.ok) emailError = res.error;
+  } else {
+    emailError = "Email non configuré (RESEND_API_KEY / RESEND_FROM).";
+  }
+
   revalidatePath("/admin");
-  return { ok: true, id: center.id };
+  return { ok: true, id: center.id, tempPassword: password, email: adminEmail, emailSent, emailError };
 }
 
 /** Renouvelle / change le plan de la licence courante d'un centre. */

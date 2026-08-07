@@ -48,6 +48,39 @@ export async function sendEmail(opts: {
   }
 }
 
+/** Email d'invitation envoyé au gérant d'un centre (avec ses accès). */
+export function centerInviteEmailHtml(opts: {
+  centerName: string;
+  managerName?: string | null;
+  loginUrl: string;
+  email: string;
+  password: string;
+}): string {
+  return `<!doctype html><html><body style="margin:0;background:#faf7f4;font-family:Arial,Helvetica,sans-serif;">
+  <div style="max-width:520px;margin:0 auto;padding:24px;">
+    <div style="text-align:center;padding:8px 0 16px;font-weight:800;color:#d95b3c;font-size:20px;">SkinScan</div>
+    <div style="background:#fff;border-radius:20px;padding:28px;box-shadow:0 6px 24px -8px rgba(42,35,32,.18);">
+      <h1 style="margin:0 0 6px;font-size:20px;color:#2a2320;">Bienvenue ${opts.managerName ?? ""} 👋</h1>
+      <p style="margin:0 0 18px;color:#6b615b;font-size:14px;line-height:1.5;">
+        Votre centre <strong>${opts.centerName}</strong> a été créé sur SkinScan.
+        Voici vos accès à l'espace centre :
+      </p>
+      <div style="background:#faf7f4;border-radius:14px;padding:16px;font-size:14px;color:#2a2320;">
+        <p style="margin:0 0 6px;">Email : <strong>${opts.email}</strong></p>
+        <p style="margin:0;">Mot de passe : <strong style="letter-spacing:1px;">${opts.password}</strong></p>
+      </div>
+      <div style="text-align:center;margin-top:22px;">
+        <a href="${opts.loginUrl}" style="display:inline-block;background:#d95b3c;color:#fff;text-decoration:none;font-weight:700;padding:14px 28px;border-radius:14px;font-size:15px;">Accéder à mon espace</a>
+      </div>
+      <p style="margin:18px 0 0;color:#a49a92;font-size:12px;line-height:1.5;text-align:center;">
+        Sur la page de connexion, cliquez sur « Connexion administrateur / centre »
+        puis saisissez ces identifiants. Conservez ce mot de passe en lieu sûr.
+      </p>
+    </div>
+  </div>
+</body></html>`;
+}
+
 function scoreColor(score: number): string {
   if (score >= 80) return "#3fa66a";
   if (score >= 60) return "#8bbf4d";
