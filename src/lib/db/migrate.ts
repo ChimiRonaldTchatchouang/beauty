@@ -19,6 +19,24 @@ function isBenign(message: string): boolean {
   return /already exists|duplicate/i.test(message);
 }
 
+/**
+ * Rend une instruction idempotente au niveau SQL (indépendant du driver) :
+ *  - CREATE TABLE / INDEX → IF NOT EXISTS
+ *  - CREATE TYPE / ADD CONSTRAINT → bloc DO qui ignore l'objet déjà présent.
+ */
+function makeIdempotent(stmt: string): string {
+  if (/^CREATE TYPE /i.test(stmt) || /^ALTER TABLE .+ ADD CONSTRAINT /i.test(stmt)) {
+    return `DO $$ BEGIN\n${stmt}\nEXCEPTION WHEN duplicate_object THEN null; END $$;`;
+  }
+  if (/^CREATE TABLE "/i.test(stmt)) {
+    return stmt.replace(/^CREATE TABLE "/i, 'CREATE TABLE IF NOT EXISTS "');
+  }
+  if (/^CREATE (UNIQUE )?INDEX "/i.test(stmt)) {
+    return stmt.replace(/^CREATE (UNIQUE )?INDEX "/i, "CREATE $1INDEX IF NOT EXISTS \"");
+  }
+  return stmt;
+}
+
 function rowsOf(result: unknown): Record<string, unknown>[] {
   if (Array.isArray(result)) return result as Record<string, unknown>[];
   const rows = (result as { rows?: unknown }).rows;
@@ -47,9 +65,10 @@ async function main() {
 
     for (const statement of statements) {
       try {
-        await db.execute(sql.raw(statement));
+        await db.execute(sql.raw(makeIdempotent(statement)));
         applied++;
       } catch (err) {
+        // Filet de sécurité : si une erreur « already exists » passe malgré tout.
         const message = err instanceof Error ? err.message : String(err);
         if (isBenign(message)) {
           skipped++;
