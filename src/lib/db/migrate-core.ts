@@ -28,6 +28,30 @@ function isBenign(message: string): boolean {
   return /already exists|duplicate/i.test(message);
 }
 
+/**
+ * Réconciliation : pour un CREATE TABLE, génère les ALTER ADD COLUMN
+ * IF NOT EXISTS de chaque colonne, afin de rattraper une table déjà créée par
+ * un déploiement antérieur à qui il manquerait des colonnes (ex. password_hash).
+ */
+function columnAltersFor(createStmt: string): string[] {
+  const nameMatch = createStmt.match(/^CREATE TABLE(?: IF NOT EXISTS)?\s+"([^"]+)"/i);
+  if (!nameMatch) return [];
+  const table = nameMatch[1];
+  const open = createStmt.indexOf("(");
+  const close = createStmt.lastIndexOf(")");
+  if (open === -1 || close === -1) return [];
+
+  const body = createStmt.slice(open + 1, close);
+  const alters: string[] = [];
+  for (let line of body.split("\n").map((l) => l.trim()).filter(Boolean)) {
+    if (line.endsWith(",")) line = line.slice(0, -1).trim();
+    // On ne garde que les vraies colonnes (les lignes CONSTRAINT commencent par C).
+    if (!line.startsWith('"')) continue;
+    alters.push(`ALTER TABLE "${table}" ADD COLUMN IF NOT EXISTS ${line}`);
+  }
+  return alters;
+}
+
 function rowsOf(result: unknown): Record<string, unknown>[] {
   if (Array.isArray(result)) return result as Record<string, unknown>[];
   const rows = (result as { rows?: unknown }).rows;
@@ -48,9 +72,16 @@ export async function runSetup(): Promise<SetupResult> {
     .map((s) => s.trim())
     .filter((s) => s.length > 0);
 
+  // On ajoute, après les CREATE TABLE, les ALTER ADD COLUMN IF NOT EXISTS pour
+  // rattraper les colonnes manquantes sur des tables déjà existantes.
+  const columnAlters = statements
+    .filter((s) => /^CREATE TABLE /i.test(s))
+    .flatMap(columnAltersFor);
+  const allStatements = [...statements, ...columnAlters];
+
   let applied = 0;
   let skipped = 0;
-  for (const statement of statements) {
+  for (const statement of allStatements) {
     try {
       await db.execute(sql.raw(makeIdempotent(statement)));
       applied++;
