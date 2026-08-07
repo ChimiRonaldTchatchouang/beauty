@@ -53,6 +53,31 @@ body {
   }
 }
 
+/* --- Effet "scanner" (rayon vert qui défile) --- */
+@keyframes scan-sweep {
+  0% { top: 4%; opacity: 0; }
+  12% { opacity: 1; }
+  88% { opacity: 1; }
+  100% { top: 96%; opacity: 0; }
+}
+.scan-line {
+  position: absolute;
+  left: 4%;
+  right: 4%;
+  height: 3px;
+  border-radius: 3px;
+  background: linear-gradient(90deg, transparent, #22c55e 20%, #4ade80 50%, #22c55e 80%, transparent);
+  box-shadow: 0 0 14px 3px rgba(34, 197, 94, 0.75);
+  animation: scan-sweep 2.4s cubic-bezier(0.45, 0, 0.55, 1) infinite alternate;
+}
+@keyframes mesh-pulse {
+  0%, 100% { opacity: 0.35; }
+  50% { opacity: 0.75; }
+}
+.scan-mesh {
+  animation: mesh-pulse 2.4s ease-in-out infinite;
+}
+
 /* Barre de défilement discrète sur desktop. */
 ::-webkit-scrollbar {
   width: 10px;

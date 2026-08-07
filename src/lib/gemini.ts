@@ -105,17 +105,23 @@ function extractJson(text: string): unknown {
   return JSON.parse(cleaned.slice(start, end + 1));
 }
 
+function toInlineData(dataUrl: string) {
+  const match = dataUrl.match(/^data:(image\/[a-zA-Z+]+);base64,(.+)$/);
+  if (!match) throw new Error("Image invalide (attendu data URL base64)");
+  const [, mimeType, data] = match;
+  return { inlineData: { mimeType, data } };
+}
+
 /**
- * Envoie l'image (data URL base64) à Gemini et renvoie une analyse normalisée.
- * Lève une erreur en cas d'échec (clé manquante, réseau, JSON invalide).
+ * Envoie une ou plusieurs photos (face, profil gauche, profil droit) à Gemini
+ * et renvoie une analyse normalisée. Lève une erreur en cas d'échec.
  */
-export async function analyzeSkin(imageDataUrl: string): Promise<ScanAnalysis> {
+export async function analyzeSkin(images: string | string[]): Promise<ScanAnalysis> {
   const apiKey = process.env.GEMINI_API_KEY;
   if (!apiKey) throw new Error("GEMINI_API_KEY manquant");
 
-  const match = imageDataUrl.match(/^data:(image\/[a-zA-Z+]+);base64,(.+)$/);
-  if (!match) throw new Error("Image invalide (attendu data URL base64)");
-  const [, mimeType, base64] = match;
+  const list = (Array.isArray(images) ? images : [images]).filter(Boolean);
+  if (list.length === 0) throw new Error("Aucune image fournie");
 
   const genAI = new GoogleGenerativeAI(apiKey);
   const model = genAI.getGenerativeModel({
@@ -123,9 +129,14 @@ export async function analyzeSkin(imageDataUrl: string): Promise<ScanAnalysis> {
     generationConfig: { temperature: 0.2, responseMimeType: "application/json" },
   });
 
+  const angleNote =
+    list.length > 1
+      ? "\n\nPlusieurs photos du même visage sont fournies (face, puis profils gauche/droit). Analyse l'ensemble pour une évaluation plus complète."
+      : "";
+
   const result = await model.generateContent([
-    SYSTEM_PROMPT,
-    { inlineData: { mimeType, data: base64 } },
+    SYSTEM_PROMPT + angleNote,
+    ...list.map(toInlineData),
   ]);
 
   const text = result.response.text();

@@ -29,10 +29,17 @@ export async function POST(req: Request) {
     );
   }
 
-  const { patientId, image, thumbnail, quality } = await req.json();
-  if (typeof image !== "string" || !image.startsWith("data:image/")) {
+  const { patientId, image, images, thumbnail, quality } = await req.json();
+  // Accepte soit une image unique, soit un tableau (face, profil G, profil D).
+  const imageList: string[] = Array.isArray(images)
+    ? images.filter((s) => typeof s === "string" && s.startsWith("data:image/"))
+    : typeof image === "string" && image.startsWith("data:image/")
+      ? [image]
+      : [];
+  if (imageList.length === 0) {
     return NextResponse.json({ error: "Image manquante." }, { status: 400 });
   }
+  const primaryImage = imageList[0];
   if (!patientId) {
     return NextResponse.json({ error: "Patient manquant." }, { status: 400 });
   }
@@ -58,7 +65,7 @@ export async function POST(req: Request) {
       centerId,
       patientId,
       staffId: session.userId,
-      imageData: image,
+      imageData: primaryImage,
       thumbnailData: typeof thumbnail === "string" ? thumbnail : null,
       quality: quality ?? null,
       status: "pending",
@@ -66,7 +73,7 @@ export async function POST(req: Request) {
     .returning({ id: scans.id });
 
   try {
-    const analysis = await analyzeSkin(image);
+    const analysis = await analyzeSkin(imageList);
     const [profile] = await db
       .select()
       .from(skinProfiles)
@@ -93,10 +100,22 @@ export async function POST(req: Request) {
     return NextResponse.json({ id: scan.id, analysis, routine });
   } catch (err) {
     console.error("[center/scan]", err);
+    const detail = err instanceof Error ? err.message : "unknown";
     await db
       .update(scans)
-      .set({ status: "failed", errorMessage: err instanceof Error ? err.message : "unknown" })
+      .set({ status: "failed", errorMessage: detail })
       .where(eq(scans.id, scan.id));
-    return NextResponse.json({ error: "analysis_failed" }, { status: 502 });
+    // Message d'aide : le cas le plus fréquent est le quota/facturation Gemini.
+    const quotaLike = /quota|429|billing|permission|api key|API_KEY/i.test(detail);
+    return NextResponse.json(
+      {
+        error: "analysis_failed",
+        detail,
+        hint: quotaLike
+          ? "L'IA Gemini a refusé la requête (quota/facturation ou clé). Activez la facturation du projet Google Cloud."
+          : "L'analyse IA a échoué.",
+      },
+      { status: 502 },
+    );
   }
 }
