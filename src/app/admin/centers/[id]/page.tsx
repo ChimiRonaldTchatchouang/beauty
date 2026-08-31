@@ -5,6 +5,7 @@ import { centers, users } from "@/lib/db/schema";
 import { and, eq, sql } from "drizzle-orm";
 import { getLicenseState } from "@/lib/license";
 import { LicenseControls } from "@/components/admin/LicenseControls";
+import { ResetPasswordButton } from "@/components/admin/ResetPasswordButton";
 
 export default async function CenterDetailPage({
   params,
@@ -72,16 +73,19 @@ export default async function CenterDetailPage({
               <p className="p-4 text-sm text-ink-soft">Aucun compte staff.</p>
             ) : (
               staff.map((u) => (
-                <div key={u.id} className="flex items-center justify-between border-b border-sand-100 px-4 py-3 last:border-0">
-                  <div>
-                    <p className="font-medium">{u.name ?? u.email}</p>
-                    <p className="text-xs text-ink-faint">{u.email}</p>
+                <div key={u.id} className="flex items-center justify-between gap-2 border-b border-sand-100 px-4 py-3 last:border-0">
+                  <div className="min-w-0">
+                    <p className="truncate font-medium">{u.name ?? u.email}</p>
+                    <p className="truncate text-xs text-ink-faint">{u.email}</p>
                   </div>
-                  <div className="text-right text-xs">
-                    <span className="rounded-full bg-brand-50 px-2 py-0.5 font-semibold text-brand-700">
-                      {u.role === "center_admin" ? "Gérant" : "Staff"}
-                    </span>
-                    <p className="mt-1 text-ink-faint">{u.activated ? "actif" : "invité"}</p>
+                  <div className="flex shrink-0 items-center gap-2">
+                    <div className="text-right text-xs">
+                      <span className="rounded-full bg-brand-50 px-2 py-0.5 font-semibold text-brand-700">
+                        {u.role === "center_admin" ? "Gérant" : "Staff"}
+                      </span>
+                      <p className="mt-1 text-ink-faint">{u.activated ? "actif" : "invité"}</p>
+                    </div>
+                    <ResetPasswordButton userId={u.id} label={u.email} />
                   </div>
                 </div>
               ))

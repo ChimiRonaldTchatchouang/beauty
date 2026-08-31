@@ -152,3 +152,33 @@ export async function setCenterActive(centerId: string, active: boolean): Promis
   revalidatePath("/admin");
   return { ok: true };
 }
+
+export interface ResetPasswordResult extends ActionResult {
+  password?: string;
+}
+
+/**
+ * Réinitialise le mot de passe d'un compte (centre/staff/admin).
+ * Si `customPassword` est vide, un mot de passe est généré. Renvoie la valeur
+ * en clair pour affichage/transmission (jamais stockée en clair).
+ */
+export async function resetPassword(
+  userId: string,
+  customPassword?: string,
+): Promise<ResetPasswordResult> {
+  await requireAdmin();
+  const clean = (customPassword ?? "").trim();
+  if (clean && clean.length < 6) {
+    return { ok: false, error: "6 caractères minimum." };
+  }
+  const password = clean || tempPassword();
+  const passwordHash = await hashPassword(password);
+  const [updated] = await db
+    .update(users)
+    .set({ passwordHash })
+    .where(eq(users.id, userId))
+    .returning({ centerId: users.centerId });
+
+  if (updated?.centerId) revalidatePath(`/admin/centers/${updated.centerId}`);
+  return { ok: true, password };
+}
