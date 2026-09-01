@@ -6,6 +6,7 @@ import { getSession } from "@/lib/auth";
 import { analyzeSkin } from "@/lib/gemini";
 import { generateRoutine } from "@/lib/routine";
 import { getLicenseState, canScan } from "@/lib/license";
+import { runSetup } from "@/lib/db/migrate-core";
 
 export const maxDuration = 60;
 
@@ -59,19 +60,31 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "quality_failed" }, { status: 422 });
   }
 
-  const [scan] = await db
-    .insert(scans)
-    .values({
-      centerId,
-      patientId,
-      staffId: session.userId,
-      imageData: primaryImage,
-      images: imageList,
-      thumbnailData: typeof thumbnail === "string" ? thumbnail : null,
-      quality: quality ?? null,
-      status: "pending",
-    })
-    .returning({ id: scans.id });
+  const insertValues = {
+    centerId,
+    patientId,
+    staffId: session.userId,
+    imageData: primaryImage,
+    images: imageList,
+    thumbnailData: typeof thumbnail === "string" ? thumbnail : null,
+    quality: quality ?? null,
+    status: "pending" as const,
+  };
+
+  // Auto-réparation : si une colonne/table manque (schéma pas à jour), on lance
+  // l'installation idempotente puis on réessaie une fois.
+  let scan: { id: string };
+  try {
+    [scan] = await db.insert(scans).values(insertValues).returning({ id: scans.id });
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    if (/does not exist/i.test(msg)) {
+      await runSetup();
+      [scan] = await db.insert(scans).values(insertValues).returning({ id: scans.id });
+    } else {
+      throw err;
+    }
+  }
 
   try {
     const analysis = await analyzeSkin(imageList);
