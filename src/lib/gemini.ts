@@ -116,6 +116,18 @@ function toInlineData(dataUrl: string) {
  * Envoie une ou plusieurs photos (face, profil gauche, profil droit) à Gemini
  * et renvoie une analyse normalisée. Lève une erreur en cas d'échec.
  */
+// Modèle par défaut à jour. Les modèles Gemini sont régulièrement retirés :
+// on ignore une valeur d'env obsolète et on prévoit une chaîne de repli.
+const DEFAULT_MODEL = "gemini-3.6-flash";
+const DEPRECATED = /^(gemini-(1\.0|1\.5|2\.0)|gemini-pro\b|text-)/i;
+
+function modelCandidates(): string[] {
+  const configured = process.env.GEMINI_MODEL?.trim();
+  const primary = !configured || DEPRECATED.test(configured) ? DEFAULT_MODEL : configured;
+  // Déduplique en gardant l'ordre : configuré → défaut → alias "latest".
+  return [...new Set([primary, DEFAULT_MODEL, "gemini-flash-latest"])];
+}
+
 export async function analyzeSkin(images: string | string[]): Promise<ScanAnalysis> {
   const apiKey = process.env.GEMINI_API_KEY;
   if (!apiKey) throw new Error("GEMINI_API_KEY manquant");
@@ -124,22 +136,28 @@ export async function analyzeSkin(images: string | string[]): Promise<ScanAnalys
   if (list.length === 0) throw new Error("Aucune image fournie");
 
   const genAI = new GoogleGenerativeAI(apiKey);
-  const model = genAI.getGenerativeModel({
-    model: process.env.GEMINI_MODEL || "gemini-2.0-flash",
-    generationConfig: { temperature: 0.2, responseMimeType: "application/json" },
-  });
-
   const angleNote =
     list.length > 1
       ? "\n\nPlusieurs photos du même visage sont fournies (face, puis profils gauche/droit). Analyse l'ensemble pour une évaluation plus complète."
       : "";
+  const parts = [SYSTEM_PROMPT + angleNote, ...list.map(toInlineData)];
 
-  const result = await model.generateContent([
-    SYSTEM_PROMPT + angleNote,
-    ...list.map(toInlineData),
-  ]);
-
-  const text = result.response.text();
-  const parsed = extractJson(text);
-  return normalizeAnalysis(parsed);
+  let lastErr: unknown;
+  for (const modelName of modelCandidates()) {
+    try {
+      const model = genAI.getGenerativeModel({
+        model: modelName,
+        generationConfig: { temperature: 0.2, responseMimeType: "application/json" },
+      });
+      const result = await model.generateContent(parts);
+      return normalizeAnalysis(extractJson(result.response.text()));
+    } catch (err) {
+      lastErr = err;
+      const msg = err instanceof Error ? err.message : String(err);
+      // Modèle indisponible/retiré → on tente le suivant ; sinon on remonte.
+      if (/not found|no longer available|not supported|404/i.test(msg)) continue;
+      throw err;
+    }
+  }
+  throw lastErr instanceof Error ? lastErr : new Error("Analyse Gemini impossible");
 }
