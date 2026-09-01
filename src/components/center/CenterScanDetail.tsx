@@ -44,9 +44,14 @@ export function CenterScanDetail({
     <I18nProvider initialLang="fr">
       <div className="mb-4 mt-2 flex flex-wrap items-center justify-between gap-3">
         <h1 className="text-2xl font-bold">{patientLabel}</h1>
-        <button onClick={doSend} disabled={sending} className="btn-primary">
-          {sent ? "✓ Renvoyer l'email" : sending ? "Envoi…" : "📧 Envoyer au patient"}
-        </button>
+        <div className="flex gap-2">
+          <a href={`/center/scans/${scanId}/report`} className="btn-ghost">
+            📄 PDF
+          </a>
+          <button onClick={doSend} disabled={sending} className="btn-primary">
+            {sent ? "✓ Renvoyer l'email" : sending ? "Envoi…" : "📧 Envoyer au patient"}
+          </button>
+        </div>
       </div>
       {error && <p className="mb-3 rounded-2xl bg-brand-50 p-3 text-sm text-brand-700">{error}</p>}
       {sent && !error && (

@@ -85,6 +85,26 @@ body {
   animation: mesh-pulse 2.4s ease-in-out infinite;
 }
 
+/* --- Impression / export PDF : on masque la navigation, fond blanc --- */
+@media print {
+  aside,
+  nav,
+  header,
+  .no-print {
+    display: none !important;
+  }
+  main {
+    padding: 0 !important;
+    max-width: none !important;
+  }
+  body {
+    background: #fff !important;
+  }
+  .print-avoid-break {
+    break-inside: avoid;
+  }
+}
+
 /* Barre de défilement discrète sur desktop. */
 ::-webkit-scrollbar {
   width: 10px;

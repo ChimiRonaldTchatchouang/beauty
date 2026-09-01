@@ -1,39 +1,10 @@
 "use client";
 
 import type { Severity } from "@/lib/db/schema";
+import { scoreColor, severityColor, categoryColor } from "@/lib/colors";
 
-// Couleur en fonction du score (rouge → ambre → vert).
-export function scoreColor(score: number): string {
-  if (score >= 80) return "#35b37e";
-  if (score >= 60) return "#7bc86c";
-  if (score >= 40) return "#e6ab3a";
-  return "#ec6a86";
-}
-
-export function severityColor(sev: Severity): string {
-  return {
-    none: "#35b37e",
-    low: "#7bc86c",
-    medium: "#e6ab3a",
-    high: "#ec6a86",
-  }[sev];
-}
-
-// Couleur identitaire par critère (anneaux colorés façon référence).
-export function categoryColor(category: string): string {
-  return (
-    {
-      hydration: "#5b8def",
-      acne: "#ec6a9c",
-      wrinkles: "#a06cf0",
-      pores: "#f0a24b",
-      redness: "#ef6b6b",
-      evenness: "#f0906e",
-      dark_spots: "#b07be0",
-      texture: "#35c2a8",
-    }[category] ?? "#8368e9"
-  );
-}
+// Ré-export pour compatibilité (les composants client importaient depuis ici).
+export { scoreColor, severityColor, categoryColor };
 
 /** Anneau de score circulaire (SVG, sans dépendance). */
 export function ScoreRing({

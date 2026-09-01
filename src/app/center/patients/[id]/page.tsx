@@ -4,7 +4,7 @@ import { getSession } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { users, skinProfiles, scans, appointments } from "@/lib/db/schema";
 import { and, desc, eq } from "drizzle-orm";
-import { scoreColor } from "@/components/Score";
+import { scoreColor } from "@/lib/colors";
 import { PatientProfileForm } from "@/components/center/PatientProfileForm";
 import { AppointmentForm } from "@/components/center/AppointmentForm";
 import { AppointmentStatusButtons } from "@/components/center/AppointmentStatusButtons";
