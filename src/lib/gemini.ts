@@ -128,6 +128,29 @@ function modelCandidates(): string[] {
   return [...new Set([primary, DEFAULT_MODEL, "gemini-flash-latest"])];
 }
 
+/** Test de connexion IA (léger) : renvoie le modèle qui répond, ou l'erreur. */
+export async function pingGemini(): Promise<{ ok: boolean; model?: string; error?: string }> {
+  const apiKey = process.env.GEMINI_API_KEY;
+  if (!apiKey) return { ok: false, error: "GEMINI_API_KEY manquant" };
+  const genAI = new GoogleGenerativeAI(apiKey);
+  let lastErr = "";
+  for (const modelName of modelCandidates()) {
+    try {
+      const model = genAI.getGenerativeModel({
+        model: modelName,
+        generationConfig: { maxOutputTokens: 1000, responseMimeType: "application/json" },
+      });
+      await model.generateContent('Réponds en JSON: {"ok":true}');
+      return { ok: true, model: modelName };
+    } catch (err) {
+      lastErr = err instanceof Error ? err.message : String(err);
+      if (/not found|no longer available|not supported|404/i.test(lastErr)) continue;
+      break;
+    }
+  }
+  return { ok: false, error: lastErr };
+}
+
 export async function analyzeSkin(images: string | string[]): Promise<ScanAnalysis> {
   const apiKey = process.env.GEMINI_API_KEY;
   if (!apiKey) throw new Error("GEMINI_API_KEY manquant");

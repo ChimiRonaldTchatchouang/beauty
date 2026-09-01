@@ -13,6 +13,7 @@ const ITEMS: NavItem[] = [
   { href: "/center/patients", label: "Patients", icon: "users" },
   { href: "/center/scan", label: "Scanner", icon: "scan" },
   { href: "/center/appointments", label: "Rendez-vous", icon: "calendar" },
+  { href: "/center/logs", label: "Diagnostic", icon: "history" },
   { href: "/center/settings", label: "Réglages", icon: "settings" },
 ];
 
