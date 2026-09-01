@@ -13,6 +13,7 @@ export function CenterScanDetail({
   analysis,
   routine,
   image,
+  images,
   emailed,
   date,
 }: {
@@ -21,6 +22,7 @@ export function CenterScanDetail({
   analysis: ScanAnalysis;
   routine: Routine | null;
   image: string | null;
+  images?: string[] | null;
   emailed: boolean;
   date: string;
 }) {
@@ -64,7 +66,7 @@ export function CenterScanDetail({
       </div>
 
       {tab === "results" ? (
-        <ResultsView analysis={analysis} image={image} showRoutineCta={false} date={date} />
+        <ResultsView analysis={analysis} image={image} images={images} showRoutineCta={false} date={date} />
       ) : (
         <RoutineView routine={routine} />
       )}

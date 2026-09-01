@@ -20,15 +20,17 @@ export default async function LoginPage({
   const { error } = await searchParams;
 
   return (
-    <div className="relative flex min-h-dvh flex-col overflow-hidden bg-gradient-to-b from-brand-50 via-sand-50 to-sand-50">
+    <div className="relative flex min-h-dvh flex-col overflow-hidden bg-grad-soft">
       <div className="pointer-events-none absolute -right-24 -top-24 h-72 w-72 rounded-full bg-brand-200/40 blur-3xl" />
       <div className="pointer-events-none absolute -bottom-24 -left-24 h-72 w-72 rounded-full bg-brand-100/50 blur-3xl" />
 
       <main className="relative flex flex-1 flex-col items-center justify-center px-6 text-center">
-        <div className="mb-8 grid h-24 w-24 place-items-center rounded-[28px] bg-brand-500 text-white shadow-soft">
+        <div className="mb-8 grid h-24 w-24 place-items-center rounded-[28px] bg-grad-brand text-white shadow-glow">
           <SparkleIcon width={48} height={48} />
         </div>
-        <h1 className="text-3xl font-bold">SkinScan</h1>
+        <h1 className="text-3xl font-bold">
+          SkinScan <span className="font-serif italic text-brand-600">AI</span>
+        </h1>
         <p className="mt-3 max-w-sm text-ink-soft">
           Diagnostic cutané par IA pour les centres de beauté et leurs client·e·s.
         </p>

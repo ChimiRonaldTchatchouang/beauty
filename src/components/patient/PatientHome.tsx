@@ -12,6 +12,7 @@ interface LastScan {
   analysis: ScanAnalysis;
   routine: Routine | null;
   image: string | null;
+  images: string[] | null;
   createdAt: string;
 }
 
@@ -34,10 +35,20 @@ export function PatientHome({
 
   return (
     <div className="animate-fade-in">
-      <div className="mb-6">
-        <p className="text-ink-faint">{t.home.hello}</p>
-        <h1 className="text-2xl font-bold">{name || "👋"}</h1>
-        {centerName && <p className="mt-1 text-sm text-ink-faint">Suivi par {centerName}</p>}
+      <div className="mb-6 overflow-hidden rounded-[26px] bg-grad-soft p-5">
+        <div className="flex items-start justify-between gap-3">
+          <div>
+            <p className="text-sm text-ink-soft">{t.home.hello} 👋</p>
+            <h1 className="mt-0.5 text-2xl font-bold leading-tight">{name || "Bonjour"}</h1>
+            <p className="mt-1 font-serif text-lg italic text-brand-700">
+              {lang === "fr" ? "Une belle peau commence ici." : "Healthy skin starts here."}
+            </p>
+            {centerName && <p className="mt-1 text-xs text-ink-faint">Suivi par {centerName}</p>}
+          </div>
+          <span className="grid h-12 w-12 shrink-0 place-items-center rounded-2xl bg-white/70 text-xl shadow-card">
+            ✨
+          </span>
+        </div>
       </div>
 
       {nextAppointment && (
@@ -80,7 +91,7 @@ export function PatientHome({
           </div>
 
           {tab === "results" ? (
-            <ResultsView analysis={lastScan.analysis} image={lastScan.image} showRoutineCta={false} date={lastScan.createdAt} />
+            <ResultsView analysis={lastScan.analysis} image={lastScan.image} images={lastScan.images} showRoutineCta={false} date={lastScan.createdAt} />
           ) : (
             <RoutineView routine={lastScan.routine} />
           )}

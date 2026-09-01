@@ -66,6 +66,7 @@ export async function POST(req: Request) {
       patientId,
       staffId: session.userId,
       imageData: primaryImage,
+      images: imageList,
       thumbnailData: typeof thumbnail === "string" ? thumbnail : null,
       quality: quality ?? null,
       status: "pending",

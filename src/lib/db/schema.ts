@@ -185,6 +185,8 @@ export const scans = pgTable(
 
     imageData: text("image_data"),
     thumbnailData: text("thumbnail_data"),
+    // Toutes les photos prises (face, profil gauche, profil droit).
+    images: jsonb("images").$type<string[]>(),
 
     status: scanStatusEnum("status").notNull().default("pending"),
     overallScore: integer("overall_score"),

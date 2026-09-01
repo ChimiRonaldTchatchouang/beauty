@@ -35,6 +35,7 @@ export default async function CenterScanPage({
         analysis={scan.analysis}
         routine={scan.routine ?? null}
         image={scan.imageData}
+        images={scan.images ?? null}
         emailed={Boolean(scan.emailedAt)}
         date={scan.createdAt.toISOString()}
       />

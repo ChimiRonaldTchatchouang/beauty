@@ -27,22 +27,22 @@ body {
 
 @layer components {
   .btn-primary {
-    @apply inline-flex items-center justify-center gap-2 rounded-2xl bg-brand-500 px-6 py-3.5
-           font-semibold text-white shadow-soft transition active:scale-[0.98]
-           disabled:opacity-50 disabled:pointer-events-none hover:bg-brand-600;
+    @apply inline-flex items-center justify-center gap-2 rounded-2xl bg-grad-brand px-6 py-3.5
+           font-semibold text-white shadow-glow transition active:scale-[0.98]
+           disabled:opacity-50 disabled:pointer-events-none hover:brightness-105;
   }
   .btn-ghost {
     @apply inline-flex items-center justify-center gap-2 rounded-2xl border border-sand-200
-           bg-white px-6 py-3.5 font-semibold text-ink transition active:scale-[0.98]
-           hover:bg-sand-50;
+           bg-white/80 px-6 py-3.5 font-semibold text-ink backdrop-blur transition
+           active:scale-[0.98] hover:bg-white;
   }
   .card {
-    @apply rounded-3xl bg-white p-5 shadow-soft;
+    @apply rounded-[26px] bg-white p-5 shadow-card;
   }
   .field {
     @apply w-full rounded-2xl border border-sand-200 bg-white px-4 py-3 text-ink
            outline-none transition placeholder:text-ink-faint focus:border-brand-400
-           focus:ring-2 focus:ring-brand-100;
+           focus:ring-4 focus:ring-brand-100;
   }
   .chip {
     @apply cursor-pointer select-none rounded-2xl border-2 border-sand-200 bg-white px-4 py-3
@@ -50,6 +50,13 @@ body {
   }
   .chip-active {
     @apply border-brand-400 bg-brand-50 text-brand-700;
+  }
+  /* Barre de score façon "Overall Score" pointillée. */
+  .score-track {
+    @apply h-3 w-full overflow-hidden rounded-full bg-sand-100;
+  }
+  .score-fill {
+    @apply h-full rounded-full bg-grad-brand transition-all duration-700;
   }
 }
 

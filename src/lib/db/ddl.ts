@@ -105,6 +105,7 @@ CREATE TABLE "scans" (
 	"staff_id" uuid,
 	"image_data" text,
 	"thumbnail_data" text,
+	"images" jsonb,
 	"status" "scan_status" DEFAULT 'pending' NOT NULL,
 	"overall_score" integer,
 	"analysis" jsonb,

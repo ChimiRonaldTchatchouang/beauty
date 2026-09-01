@@ -260,7 +260,7 @@ function Flow({ patients, preselected }: { patients: Patient[]; preselected: str
           </div>
         </div>
         {error && <p className="mb-3 rounded-2xl bg-brand-50 p-3 text-sm text-brand-700">{error}</p>}
-        <ResultsView analysis={analysis} image={captures[0]} showRoutineCta={false} />
+        <ResultsView analysis={analysis} image={captures[0]} images={captures} showRoutineCta={false} />
         <div className="mt-6">
           <Link href={`/center/patients/${patientId}`} className="text-sm font-medium text-brand-600">
             → Voir la fiche patient

@@ -13,6 +13,7 @@ export default async function MeHome() {
       analysis: scans.analysis,
       routine: scans.routine,
       image: scans.imageData,
+      images: scans.images,
       createdAt: scans.createdAt,
     })
     .from(scans)
@@ -45,6 +46,7 @@ export default async function MeHome() {
               analysis: lastScan.analysis,
               routine: lastScan.routine ?? null,
               image: lastScan.image,
+              images: lastScan.images ?? null,
               createdAt: lastScan.createdAt.toISOString(),
             }
           : null

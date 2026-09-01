@@ -30,7 +30,7 @@ export default async function MeScanDetail({
         </Link>
         <ScanActions scanId={scan.id} />
       </div>
-      <ResultsView analysis={scan.analysis} image={scan.imageData} showRoutineCta={false} date={scan.createdAt} />
+      <ResultsView analysis={scan.analysis} image={scan.imageData} images={scan.images} showRoutineCta={false} date={scan.createdAt} />
     </div>
   );
 }
