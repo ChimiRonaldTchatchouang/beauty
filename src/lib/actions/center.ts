@@ -33,6 +33,7 @@ export async function createPatient(formData: FormData): Promise<ActionResult> {
   const s = await requireCenter();
   const name = String(formData.get("name") ?? "").trim();
   const email = String(formData.get("email") ?? "").trim().toLowerCase();
+  const phone = String(formData.get("phone") ?? "").trim() || null;
   if (!email) return { ok: false, error: "Email requis." };
 
   const [existing] = await db.select().from(users).where(eq(users.email, email)).limit(1);
@@ -43,7 +44,7 @@ export async function createPatient(formData: FormData): Promise<ActionResult> {
     // Rattache un compte existant (ex. patient déjà connecté sans centre).
     await db
       .update(users)
-      .set({ centerId: s.centerId, role: "patient", name: existing.name ?? name })
+      .set({ centerId: s.centerId, role: "patient", name: existing.name ?? name, phone: existing.phone ?? phone })
       .where(eq(users.id, existing.id));
     revalidatePath("/center/patients");
     return { ok: true, id: existing.id };
@@ -51,7 +52,7 @@ export async function createPatient(formData: FormData): Promise<ActionResult> {
 
   const [created] = await db
     .insert(users)
-    .values({ email, name: name || null, role: "patient", centerId: s.centerId, activated: false })
+    .values({ email, name: name || null, phone, role: "patient", centerId: s.centerId, activated: false })
     .returning({ id: users.id });
   await db.insert(skinProfiles).values({ userId: created.id }).onConflictDoNothing();
 

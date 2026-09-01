@@ -7,6 +7,7 @@ import { I18nProvider } from "@/lib/i18n/context";
 import { compressImage, makeThumbnail, checkQuality, type QualityResult } from "@/lib/image";
 import { ResultsView } from "@/components/views/ResultsView";
 import { ScanOverlay } from "./ScanOverlay";
+import { IntakeForm, type IntakeAnswers } from "./IntakeForm";
 import { CameraIcon, UploadIcon } from "@/components/icons";
 import { sendResults } from "@/lib/actions/center";
 import type { ScanAnalysis } from "@/lib/db/schema";
@@ -17,7 +18,7 @@ interface Patient {
   email: string;
 }
 
-type Phase = "select" | "camera" | "analyzing" | "results" | "error";
+type Phase = "select" | "intake" | "camera" | "analyzing" | "results" | "error";
 
 const POSES = [
   { key: "front", label: "Face", hint: "Regardez droit devant vous", emoji: "😊" },
@@ -32,9 +33,11 @@ function Flow({ patients, preselected }: { patients: Patient[]; preselected: str
   const fileRef = useRef<HTMLInputElement>(null);
 
   const [patientId, setPatientId] = useState<string | null>(preselected);
-  const [phase, setPhase] = useState<Phase>(preselected ? "camera" : "select");
+  const [phase, setPhase] = useState<Phase>(preselected ? "intake" : "select");
   const [poseIndex, setPoseIndex] = useState(0);
   const [captures, setCaptures] = useState<string[]>([]);
+  const [qualities, setQualities] = useState<QualityResult[]>([]);
+  const [intake, setIntake] = useState<IntakeAnswers | null>(null);
   const [tip, setTip] = useState("");
   const [analysis, setAnalysis] = useState<ScanAnalysis | null>(null);
   const [scanId, setScanId] = useState<string | null>(null);
@@ -91,14 +94,16 @@ function Flow({ patients, preselected }: { patients: Patient[]; preselected: str
     return "Qualité OK ✓";
   }
 
-  async function addCapture(dataUrl: string) {
+  async function addCapture(dataUrl: string, quality: QualityResult) {
     const next = [...captures, dataUrl];
+    const nextQ = [...qualities, quality];
     setCaptures(next);
+    setQualities(nextQ);
     if (poseIndex < POSES.length - 1) {
       setPoseIndex(poseIndex + 1);
     } else {
       stopCamera();
-      await analyze(next);
+      await analyze(next, nextQ);
     }
   }
 
@@ -114,7 +119,7 @@ function Flow({ patients, preselected }: { patients: Patient[]; preselected: str
       }
       setError(null);
       const dataUrl = await compressImage(v);
-      await addCapture(dataUrl);
+      await addCapture(dataUrl, quality);
     } finally {
       setBusy(false);
     }
@@ -133,23 +138,22 @@ function Flow({ patients, preselected }: { patients: Patient[]; preselected: str
         return;
       }
       setError(null);
-      await addCapture(dataUrl);
+      await addCapture(dataUrl, quality);
     } finally {
       setBusy(false);
     }
   }
 
-  async function analyze(images: string[]) {
+  async function analyze(images: string[], imgQualities: QualityResult[]) {
     setPhase("analyzing");
     const thumbnail = await makeThumbnail(images[0]).catch(() => null);
-    const quality = await checkQuality(images[0]).catch(() => ({ ok: true }) as QualityResult);
     let attempt = 0;
     while (attempt < 3) {
       try {
         const res = await fetch("/api/center/scan", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ patientId, images, thumbnail, quality }),
+          body: JSON.stringify({ patientId, images, thumbnail, qualities: imgQualities, intake }),
         });
         if (res.status === 402) {
           setError("Quota de scans atteint ou licence inactive.");
@@ -191,6 +195,7 @@ function Flow({ patients, preselected }: { patients: Patient[]; preselected: str
 
   function reset() {
     setCaptures([]);
+    setQualities([]);
     setPoseIndex(0);
     setAnalysis(null);
     setScanId(null);
@@ -216,7 +221,7 @@ function Flow({ patients, preselected }: { patients: Patient[]; preselected: str
             {patients.map((p) => (
               <button
                 key={p.id}
-                onClick={() => { setPatientId(p.id); setPhase("camera"); }}
+                onClick={() => { setPatientId(p.id); setPhase("intake"); }}
                 className="card flex items-center gap-3 text-left"
               >
                 <span className="grid h-10 w-10 place-items-center rounded-full bg-brand-100 font-bold text-brand-700">
@@ -228,6 +233,19 @@ function Flow({ patients, preselected }: { patients: Patient[]; preselected: str
           </div>
         )}
       </div>
+    );
+  }
+
+  if (phase === "intake") {
+    return (
+      <IntakeForm
+        patientLabel={patient?.name ?? patient?.email ?? "ce patient"}
+        onBack={() => setPhase("select")}
+        onDone={(answers) => {
+          setIntake(answers);
+          setPhase("camera");
+        }}
+      />
     );
   }
 

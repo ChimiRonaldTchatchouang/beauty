@@ -18,17 +18,4 @@ export function severityColor(sev: Severity): string {
   }[sev];
 }
 
-export function categoryColor(category: string): string {
-  return (
-    {
-      hydration: "#5b8def",
-      acne: "#ec6a9c",
-      wrinkles: "#a06cf0",
-      pores: "#f0a24b",
-      redness: "#ef6b6b",
-      evenness: "#f0906e",
-      dark_spots: "#b07be0",
-      texture: "#35c2a8",
-    }[category] ?? "#8368e9"
-  );
-}
+export { categoryColor } from "./categories";

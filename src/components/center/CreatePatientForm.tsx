@@ -42,6 +42,7 @@ export function CreatePatientForm({ redirectToScan = false }: { redirectToScan?:
         <form action={submit} className="flex flex-col gap-3">
           <input name="name" className="field" placeholder="Nom du patient" />
           <input name="email" type="email" className="field" placeholder="Email Google du patient" required />
+          <input name="phone" type="tel" className="field" placeholder="Téléphone WhatsApp (ex. +237…)" />
           {error && <p className="text-sm text-brand-600">{error}</p>}
           <div className="mt-2 flex gap-2">
             <button type="button" onClick={() => setOpen(false)} className="btn-ghost flex-1">

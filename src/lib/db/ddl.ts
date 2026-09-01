@@ -1,5 +1,4 @@
-// Généré depuis drizzle/0000_init_b2b.sql — schéma embarqué pour exécution
-// côté serverless (aucune lecture de fichier au runtime).
+// Généré depuis drizzle/0000_init_b2b.sql — schéma embarqué (serverless).
 // Ne pas éditer à la main : régénérer si le schéma change.
 
 export const SCHEMA_DDL = `
@@ -111,6 +110,7 @@ CREATE TABLE "scans" (
 	"analysis" jsonb,
 	"routine" jsonb,
 	"quality" jsonb,
+	"intake" jsonb,
 	"error_message" text,
 	"emailed_at" timestamp with time zone,
 	"created_at" timestamp with time zone DEFAULT now() NOT NULL
@@ -133,6 +133,7 @@ CREATE TABLE "users" (
 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
 	"email" text NOT NULL,
 	"name" text,
+	"phone" text,
 	"role" "role" DEFAULT 'patient' NOT NULL,
 	"center_id" uuid,
 	"google_id" text,

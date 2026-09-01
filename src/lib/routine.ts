@@ -20,6 +20,9 @@ const INGREDIENT_BY_CONCERN: Record<string, string> = {
   redness: "centella (cica)",
   hydration: "acide hyaluronique",
   evenness: "niacinamide",
+  shaving_irritation: "aloe vera / panthénol",
+  lip_hydration: "beurre de karité",
+  dark_circles: "caféine",
 };
 
 const TREATMENT_LABEL: Record<string, string> = {
@@ -30,11 +33,15 @@ const TREATMENT_LABEL: Record<string, string> = {
   redness: "Soin apaisant",
   hydration: "Sérum hydratant",
   evenness: "Sérum uniformisant",
+  shaving_irritation: "Soin apaisant post-rasage",
+  lip_hydration: "Baume réparateur lèvres",
+  dark_circles: "Soin contour des yeux",
 };
 
 export function generateRoutine(
   analysis: ScanAnalysis,
   profile: { skinType?: string | null; concerns?: string[] } | null,
+  intake?: Record<string, unknown> | null,
 ): Routine {
   // On cible les 2 critères les plus faibles (score le plus bas) du scan,
   // complétés par les préoccupations déclarées dans le profil.
@@ -120,20 +127,46 @@ export function generateRoutine(
     frequency: "Chaque soir",
   });
 
-  const tips = buildTips(analysis);
+  // Protocole rasage si la personne se rase (questionnaire) ou irritation détectée.
+  const shaves = Boolean(intake?.shaves) || analysis.metrics.some((m) => m.category === "shaving_irritation");
+  const shaving: RoutineStep[] | undefined = shaves
+    ? [
+        {
+          order: 1,
+          category: "treatment",
+          title: "Préparation",
+          reason: "Ramollir le poil et préparer la peau pour éviter micro-coupures et frottements.",
+          keyIngredient: "huile / gel de rasage",
+          frequency: "Avant chaque rasage",
+        },
+        {
+          order: 2,
+          category: "treatment",
+          title: "Rasage",
+          reason: "Rasoir propre, toujours dans le sens du poil, sans repasser au même endroit.",
+          frequency: "Jours de rasage",
+        },
+        {
+          order: 3,
+          category: "treatment",
+          title: "Après-rasage",
+          reason: "Baume apaisant sans alcool : calme l'inflammation et prévient les taches sombres.",
+          keyIngredient: "aloe vera / panthénol",
+          frequency: "Après chaque rasage",
+        },
+      ]
+    : undefined;
 
-  return { morning, evening, tips };
+  const tips = buildTips(analysis, intake);
+
+  return { morning, evening, shaving, tips };
 }
 
-function buildTips(analysis: ScanAnalysis): Routine["tips"] {
+function buildTips(analysis: ScanAnalysis, intake?: Record<string, unknown> | null): Routine["tips"] {
   const tips: Routine["tips"] = [
     {
-      title: "Hydratation",
-      body: "Bois assez d'eau dans la journée : une peau hydratée de l'intérieur paraît plus lisse et plus lumineuse.",
-    },
-    {
       title: "Soleil",
-      body: "Le SPF est le geste anti-âge n°1. Même à l'ombre ou par temps couvert, applique-le chaque matin.",
+      body: "La protection solaire chaque matin fixe les résultats : sur peaux riches en mélanine, elle empêche les UV d'assombrir durablement les taches.",
     },
   ];
   const hydration = analysis.metrics.find((m) => m.category === "hydration");
@@ -143,9 +176,21 @@ function buildTips(analysis: ScanAnalysis): Routine["tips"] {
       body: "Évite les nettoyants trop décapants et l'eau très chaude : ils fragilisent la barrière et accentuent la déshydratation.",
     });
   }
+  if (Boolean(intake?.dryLips) || analysis.metrics.some((m) => m.category === "lip_hydration")) {
+    tips.push({
+      title: "Lèvres",
+      body: "Applique un baume nourrissant matin et soir pour réduire la sécheresse et les gerçures.",
+    });
+  }
+  if (analysis.metrics.some((m) => m.category === "shaving_irritation")) {
+    tips.push({
+      title: "Rasage",
+      body: "L'irritation répétée entretient l'apparition de taches sombres : rase toujours dans le sens du poil, sans repasser plusieurs fois.",
+    });
+  }
   tips.push({
-    title: "Alimentation",
-    body: "Privilégie fruits, légumes et bonnes graisses (oméga-3) : ils soutiennent visiblement l'éclat de la peau.",
+    title: "Hydratation & alimentation",
+    body: "Bois suffisamment d'eau et privilégie fruits, légumes et oméga-3 : ils soutiennent visiblement l'éclat de la peau.",
   });
   return tips;
 }
@@ -160,6 +205,9 @@ function labelConcern(c: string): string {
       redness: "les rougeurs",
       hydration: "l'hydratation",
       evenness: "l'uniformité du teint",
+      shaving_irritation: "l'irritation du rasage",
+      lip_hydration: "l'hydratation des lèvres",
+      dark_circles: "les cernes",
     }[c] ?? c
   );
 }

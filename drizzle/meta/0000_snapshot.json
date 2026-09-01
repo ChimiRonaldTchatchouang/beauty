@@ -1,5 +1,5 @@
 {
-  "id": "0ff3ddf0-56d2-44c0-977d-60653b582e2e",
+  "id": "be65c855-e92f-480d-85e1-22aa434fb64d",
   "prevId": "00000000-0000-0000-0000-000000000000",
   "version": "7",
   "dialect": "postgresql",
@@ -836,6 +836,12 @@
           "primaryKey": false,
           "notNull": false
         },
+        "intake": {
+          "name": "intake",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": false
+        },
         "error_message": {
           "name": "error_message",
           "type": "text",
@@ -1052,6 +1058,12 @@
         },
         "name": {
           "name": "name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "phone": {
+          "name": "phone",
           "type": "text",
           "primaryKey": false,
           "notNull": false

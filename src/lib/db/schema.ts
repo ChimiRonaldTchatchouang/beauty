@@ -116,6 +116,7 @@ export const users = pgTable(
     id: uuid("id").defaultRandom().primaryKey(),
     email: text("email").notNull().unique(),
     name: text("name"),
+    phone: text("phone"), // pour l'envoi WhatsApp (patients)
     role: roleEnum("role").notNull().default("patient"),
 
     centerId: uuid("center_id").references(() => centers.id, {
@@ -192,7 +193,9 @@ export const scans = pgTable(
     overallScore: integer("overall_score"),
     analysis: jsonb("analysis").$type<ScanAnalysis>(),
     routine: jsonb("routine").$type<Routine>(),
-    quality: jsonb("quality").$type<Record<string, number | boolean | string>>(),
+    quality: jsonb("quality").$type<Record<string, unknown>>(),
+    // Réponses au questionnaire pré-scan (rasage, soleil, lèvres, objectif…).
+    intake: jsonb("intake").$type<Record<string, unknown>>(),
     errorMessage: text("error_message"),
 
     // Traçabilité de l'envoi email au patient.
@@ -358,10 +361,17 @@ export interface ScanMetricResult {
   explanation: string;
 }
 
+export interface ScanPriority {
+  title: string;
+  why: string;
+}
+
 export interface ScanAnalysis {
   overallScore: number;
   summary: string;
-  metrics: ScanMetricResult[];
+  skinType?: string; // ex. "Mixte à tendance grasse"
+  priorities?: ScanPriority[]; // 3 axes prioritaires classés
+  metrics: ScanMetricResult[]; // liste dynamique de critères pertinents
 }
 
 export interface RoutineStep {
@@ -376,5 +386,6 @@ export interface RoutineStep {
 export interface Routine {
   morning: RoutineStep[];
   evening: RoutineStep[];
+  shaving?: RoutineStep[]; // protocole anti-irritation si rasage
   tips: { title: string; body: string }[];
 }

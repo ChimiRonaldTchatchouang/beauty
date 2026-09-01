@@ -106,6 +106,7 @@ CREATE TABLE "scans" (
 	"analysis" jsonb,
 	"routine" jsonb,
 	"quality" jsonb,
+	"intake" jsonb,
 	"error_message" text,
 	"emailed_at" timestamp with time zone,
 	"created_at" timestamp with time zone DEFAULT now() NOT NULL
@@ -128,6 +129,7 @@ CREATE TABLE "users" (
 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
 	"email" text NOT NULL,
 	"name" text,
+	"phone" text,
 	"role" "role" DEFAULT 'patient' NOT NULL,
 	"center_id" uuid,
 	"google_id" text,

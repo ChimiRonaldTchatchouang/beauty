@@ -3,18 +3,10 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useI18n } from "@/lib/i18n/context";
-import { MetricRing, ScoreBar, SeverityDot, categoryColor, scoreColor } from "@/components/Score";
+import { MetricRing, ScoreBar, SeverityDot, scoreColor } from "@/components/Score";
 import { AnnotatedScan } from "./AnnotatedScan";
+import { categoryColor, categoryLabel } from "@/lib/categories";
 import type { ScanAnalysis, Severity } from "@/lib/db/schema";
-
-const ZONE_LABEL: Record<string, { fr: string; en: string }> = {
-  front: { fr: "Front", en: "Forehead" },
-  joues: { fr: "Joues", en: "Cheeks" },
-  nez: { fr: "Nez", en: "Nose" },
-  menton: { fr: "Menton", en: "Chin" },
-  contour_yeux: { fr: "Contour des yeux", en: "Eye area" },
-  global: { fr: "Visage entier", en: "Whole face" },
-};
 
 function overallLabel(score: number, lang: "fr" | "en"): string {
   if (lang === "fr") {
@@ -64,12 +56,17 @@ export function ResultsView({
           <div className="score-track">
             <div className="score-fill" style={{ width: `${Math.max(4, analysis.overallScore)}%` }} />
           </div>
-          <div className="mt-2 flex items-center justify-between">
+          <div className="mt-2 flex flex-wrap items-center gap-2">
             <span className="rounded-full bg-brand-50 px-2.5 py-0.5 text-xs font-semibold text-brand-700">
               {overallLabel(analysis.overallScore, lang)}
             </span>
+            {analysis.skinType && (
+              <span className="rounded-full bg-sand-100 px-2.5 py-0.5 text-xs font-medium text-ink-soft">
+                {analysis.skinType}
+              </span>
+            )}
             {date && (
-              <span className="text-xs text-ink-faint">
+              <span className="ml-auto text-xs text-ink-faint">
                 {new Date(date).toLocaleDateString(lang === "fr" ? "fr-FR" : "en-US", {
                   day: "numeric",
                   month: "long",
@@ -88,8 +85,28 @@ export function ResultsView({
         )}
       </div>
 
-      {/* Colonne droite : anneaux + détails + reco IA */}
+      {/* Colonne droite : priorités + anneaux + détails + reco IA */}
       <div className="mt-6 lg:mt-0">
+        {/* Par où commencer — priorités */}
+        {analysis.priorities && analysis.priorities.length > 0 && (
+          <div className="card mb-5">
+            <p className="mb-3 font-semibold">🎯 {lang === "fr" ? "Par où commencer" : "Where to start"}</p>
+            <div className="flex flex-col gap-3">
+              {analysis.priorities.map((p, i) => (
+                <div key={i} className="flex gap-3">
+                  <span className="grid h-7 w-7 shrink-0 place-items-center rounded-full bg-grad-brand text-sm font-bold text-white">
+                    {i + 1}
+                  </span>
+                  <div>
+                    <p className="font-semibold">{p.title}</p>
+                    <p className="text-sm text-ink-soft">{p.why}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
         {/* Anneaux colorés par critère */}
         <div className="card mb-5">
           <p className="mb-4 font-semibold">{t.results.details}</p>
@@ -99,7 +116,7 @@ export function ResultsView({
                 key={m.category}
                 score={m.score}
                 color={categoryColor(m.category)}
-                title={t.categories[m.category as keyof typeof t.categories] ?? m.category}
+                title={categoryLabel(m.category, lang)}
                 subtitle={t.results.severity[m.severity as Severity]}
               />
             ))}
@@ -110,14 +127,12 @@ export function ResultsView({
         <div className="flex flex-col gap-3">
           {analysis.metrics.map((m) => {
             const isOpen = open === m.category;
-            const zone = ZONE_LABEL[m.zone]?.[lang] ?? m.zone;
+            const zone = m.zone;
             return (
               <div key={m.category} className="card p-4">
                 <button className="flex w-full items-center gap-3 text-left" onClick={() => setOpen(isOpen ? null : m.category)}>
                   <span className="h-3 w-3 shrink-0 rounded-full" style={{ backgroundColor: categoryColor(m.category) }} />
-                  <span className="flex-1 font-semibold">
-                    {t.categories[m.category as keyof typeof t.categories] ?? m.category}
-                  </span>
+                  <span className="flex-1 font-semibold">{categoryLabel(m.category, lang)}</span>
                   <span className="text-sm font-bold" style={{ minWidth: 32 }}>{m.score}</span>
                   <span className="text-ink-faint">{isOpen ? "▲" : "▼"}</span>
                 </button>

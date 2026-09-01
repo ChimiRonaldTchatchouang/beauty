@@ -24,16 +24,24 @@ export default async function ScanReportPage({
   const [patient] = await db.select().from(users).where(eq(users.id, scan.patientId)).limit(1);
   const [center] = await db.select().from(centers).where(eq(centers.id, session.centerId)).limit(1);
 
+  // Référence lisible + fiabilité par photo (si stockée).
+  const d = scan.createdAt;
+  const scanRef = `SCAN-${d.getUTCFullYear()}${String(d.getUTCMonth() + 1).padStart(2, "0")}${String(d.getUTCDate()).padStart(2, "0")}-${scan.id.slice(0, 4).toUpperCase()}`;
+  const q = scan.quality as { photos?: { ok?: boolean; reason?: string }[] } | null;
+  const photoQualities = Array.isArray(q?.photos) ? q!.photos : null;
+
   return (
     <ScanReport
       centerName={center?.name ?? "Centre"}
       centerLogo={center?.logoUrl ?? null}
       patientLabel={patient?.name ?? patient?.email ?? "Patient"}
       date={scan.createdAt.toISOString()}
+      scanRef={scanRef}
       analysis={scan.analysis}
       routine={scan.routine ?? null}
       image={scan.imageData}
       images={scan.images ?? null}
+      photoQualities={photoQualities}
     />
   );
 }

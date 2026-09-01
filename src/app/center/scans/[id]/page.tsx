@@ -2,7 +2,7 @@ import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { getSession } from "@/lib/auth";
 import { db } from "@/lib/db";
-import { scans, users } from "@/lib/db/schema";
+import { scans, users, centers } from "@/lib/db/schema";
 import { and, eq } from "drizzle-orm";
 import { CenterScanDetail } from "@/components/center/CenterScanDetail";
 
@@ -23,6 +23,7 @@ export default async function CenterScanPage({
   if (!scan || !scan.analysis) notFound();
 
   const [patient] = await db.select().from(users).where(eq(users.id, scan.patientId)).limit(1);
+  const [center] = await db.select().from(centers).where(eq(centers.id, session.centerId)).limit(1);
 
   return (
     <div>
@@ -32,6 +33,8 @@ export default async function CenterScanPage({
       <CenterScanDetail
         scanId={scan.id}
         patientLabel={patient?.name ?? patient?.email ?? "Patient"}
+        patientPhone={patient?.phone ?? null}
+        centerName={center?.name ?? "votre centre"}
         analysis={scan.analysis}
         routine={scan.routine ?? null}
         image={scan.imageData}

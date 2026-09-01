@@ -1,43 +1,35 @@
 import "server-only";
 import { GoogleGenerativeAI } from "@google/generative-ai";
-import type { ScanAnalysis, ScanMetricResult, Severity } from "./db/schema";
+import type { ScanAnalysis, ScanMetricResult, ScanPriority, Severity } from "./db/schema";
+import { ALLOWED_CATEGORIES } from "./categories";
 
-// Catégories que l'IA doit toujours renvoyer, dans cet ordre.
-export const METRIC_CATEGORIES = [
-  "acne",
-  "dark_spots",
-  "wrinkles",
-  "pores",
-  "redness",
-  "hydration",
-  "evenness",
-] as const;
+const SYSTEM_PROMPT = `Tu es un expert en analyse cosmétique de la peau (esthétique uniquement, JAMAIS de diagnostic médical ou pathologique).
+On te fournit une ou plusieurs photos d'un visage, et parfois un court questionnaire décrivant la personne. Analyse UNIQUEMENT des aspects cosmétiques visibles, et adapte l'analyse au questionnaire (ex. n'évalue "irritation liée au rasage" que si la personne se rase).
 
-export type MetricCategory = (typeof METRIC_CATEGORIES)[number];
-
-const SYSTEM_PROMPT = `Tu es un assistant d'analyse cosmétique de la peau (esthétique uniquement, JAMAIS de diagnostic médical ou pathologique).
-On te fournit une photo de visage. Analyse UNIQUEMENT des aspects cosmétiques visibles.
-
-Tu dois répondre STRICTEMENT en JSON valide (aucun texte hors JSON, pas de markdown, pas de \`\`\`), au format exact suivant :
+Tu dois répondre STRICTEMENT en JSON valide (aucun texte hors JSON, pas de markdown, pas de \`\`\`), au format exact :
 {
   "overallScore": <entier 0-100, 100 = peau visiblement en très bonne santé>,
-  "summary": "<1 phrase courte et bienveillante en français décrivant l'état général>",
+  "skinType": "<type de peau estimé, ex: 'Mixte à tendance grasse', 'Sèche', 'Normale'>",
+  "summary": "<2-3 phrases bienveillantes en français: état général + axes d'amélioration>",
+  "priorities": [
+    { "title": "<axe prioritaire n°1>", "why": "<pourquoi c'est prioritaire, avec le lien de cause à effet, 1-2 phrases>" }
+  ],
   "metrics": [
     {
-      "category": "acne" | "dark_spots" | "wrinkles" | "pores" | "redness" | "hydration" | "evenness",
-      "score": <entier 0-100, 100 = aucun problème sur ce critère>,
+      "category": <un de: ${ALLOWED_CATEGORIES.map((c) => `"${c}"`).join(", ")}>,
+      "score": <entier 0-100, 100 = parfait sur ce critère>,
       "severity": "none" | "low" | "medium" | "high",
-      "zone": "<front | joues | nez | menton | contour_yeux | global>",
-      "explanation": "<explication pédagogique très simple en français : ce que c'est et pourquoi ça arrive, 1-2 phrases>"
+      "zone": "<zones concernées en français, ex: 'Joues, ligne de barbe, cou'>",
+      "explanation": "<observation précise et pédagogique, 1-2 phrases>"
     }
   ]
 }
 
 Règles :
-- Fournis EXACTEMENT une entrée pour chacune des 7 catégories, dans l'ordre.
-- Reste cosmétique : ne mentionne aucune maladie, cancer, ni condition médicale.
-- Sois bienveillant et non anxiogène.
-- Si la photo ne permet pas de juger un critère, mets score 70, severity "low", explication neutre.`;
+- "priorities" : les 3 axes les plus importants, classés (le plus impactant d'abord), avec le raisonnement (ex. l'irritation du rasage entretient les taches sombres).
+- "metrics" : SEULEMENT les critères PERTINENTS pour cette personne (entre 5 et 10). N'inclus "shaving_irritation" que si la personne se rase ; "lip_hydration" et "dark_circles" si visibles/pertinents.
+- Reste cosmétique : aucune maladie, aucun cancer, aucune condition médicale.
+- Bienveillant, non anxiogène, adapté aux peaux de toutes carnations.`;
 
 function severityFromScore(score: number): Severity {
   if (score >= 80) return "none";
@@ -46,52 +38,65 @@ function severityFromScore(score: number): Severity {
   return "high";
 }
 
-/** Nettoie et valide la sortie du modèle en un ScanAnalysis sûr. */
+/** Nettoie et valide la sortie du modèle en un ScanAnalysis sûr (critères dynamiques). */
 export function normalizeAnalysis(raw: unknown): ScanAnalysis {
   const obj = (typeof raw === "object" && raw ? raw : {}) as Record<string, unknown>;
   const rawMetrics = Array.isArray(obj.metrics) ? obj.metrics : [];
 
-  const byCategory = new Map<string, Record<string, unknown>>();
-  for (const m of rawMetrics) {
-    if (m && typeof m === "object" && typeof (m as any).category === "string") {
-      byCategory.set((m as any).category, m as Record<string, unknown>);
-    }
-  }
-
-  const metrics: ScanMetricResult[] = METRIC_CATEGORIES.map((category) => {
-    const m = byCategory.get(category) ?? {};
+  const seen = new Set<string>();
+  const metrics: ScanMetricResult[] = [];
+  for (const item of rawMetrics) {
+    if (!item || typeof item !== "object") continue;
+    const m = item as Record<string, unknown>;
+    const category = typeof m.category === "string" ? m.category : "";
+    if (!ALLOWED_CATEGORIES.includes(category) || seen.has(category)) continue;
+    seen.add(category);
     let score = Number(m.score);
     if (!Number.isFinite(score)) score = 70;
     score = Math.max(0, Math.min(100, Math.round(score)));
     const severity =
-      typeof m.severity === "string" &&
-      ["none", "low", "medium", "high"].includes(m.severity as string)
+      typeof m.severity === "string" && ["none", "low", "medium", "high"].includes(m.severity)
         ? (m.severity as Severity)
         : severityFromScore(score);
-    return {
+    metrics.push({
       category,
       score,
       severity,
-      zone: typeof m.zone === "string" ? (m.zone as string) : "global",
-      explanation:
-        typeof m.explanation === "string" ? (m.explanation as string) : "",
-    };
-  });
+      zone: typeof m.zone === "string" ? m.zone : "Visage",
+      explanation: typeof m.explanation === "string" ? m.explanation : "",
+    });
+  }
+
+  // Repli si l'IA n'a rien renvoyé d'exploitable.
+  if (metrics.length === 0) {
+    for (const category of ["hydration", "evenness", "pores", "acne", "dark_spots"]) {
+      metrics.push({ category, score: 70, severity: "low", zone: "Visage", explanation: "" });
+    }
+  }
 
   let overall = Number(obj.overallScore);
   if (!Number.isFinite(overall)) {
-    overall = Math.round(
-      metrics.reduce((s, m) => s + m.score, 0) / metrics.length,
-    );
+    overall = Math.round(metrics.reduce((s, m) => s + m.score, 0) / metrics.length);
   }
   overall = Math.max(0, Math.min(100, Math.round(overall)));
 
+  const priorities: ScanPriority[] = Array.isArray(obj.priorities)
+    ? (obj.priorities as unknown[])
+        .filter((p): p is Record<string, unknown> => Boolean(p) && typeof p === "object")
+        .slice(0, 3)
+        .map((p) => ({
+          title: typeof p.title === "string" ? p.title : "",
+          why: typeof p.why === "string" ? p.why : "",
+        }))
+        .filter((p) => p.title)
+    : [];
+
   return {
     overallScore: overall,
+    skinType: typeof obj.skinType === "string" ? obj.skinType : undefined,
     summary:
-      typeof obj.summary === "string" && obj.summary
-        ? (obj.summary as string)
-        : "Analyse cosmétique de votre peau.",
+      typeof obj.summary === "string" && obj.summary ? obj.summary : "Analyse cosmétique de votre peau.",
+    priorities,
     metrics,
   };
 }
@@ -151,7 +156,33 @@ export async function pingGemini(): Promise<{ ok: boolean; model?: string; error
   return { ok: false, error: lastErr };
 }
 
-export async function analyzeSkin(images: string | string[]): Promise<ScanAnalysis> {
+function intakeToText(intake?: Record<string, unknown> | null): string {
+  if (!intake || typeof intake !== "object") return "";
+  const lines: string[] = [];
+  const L: Record<string, string> = {
+    shaves: "Se rase le visage",
+    shaveFreq: "Fréquence de rasage",
+    perceivedSkin: "Peau ressentie",
+    sunExposure: "Exposition solaire fréquente",
+    usesSpf: "Utilise une protection solaire",
+    dryLips: "Lèvres souvent sèches",
+    tiredEyes: "Cernes / fatigue fréquents",
+    allergies: "Allergies / à éviter",
+    goal: "Objectif principal",
+    concerns: "Préoccupations déclarées",
+  };
+  for (const [k, label] of Object.entries(L)) {
+    const v = (intake as Record<string, unknown>)[k];
+    if (v === undefined || v === null || v === "") continue;
+    lines.push(`- ${label} : ${Array.isArray(v) ? v.join(", ") : String(v)}`);
+  }
+  return lines.length ? `\n\nQUESTIONNAIRE DE LA PERSONNE :\n${lines.join("\n")}` : "";
+}
+
+export async function analyzeSkin(
+  images: string | string[],
+  intake?: Record<string, unknown> | null,
+): Promise<ScanAnalysis> {
   const apiKey = process.env.GEMINI_API_KEY;
   if (!apiKey) throw new Error("GEMINI_API_KEY manquant");
 
@@ -161,9 +192,9 @@ export async function analyzeSkin(images: string | string[]): Promise<ScanAnalys
   const genAI = new GoogleGenerativeAI(apiKey);
   const angleNote =
     list.length > 1
-      ? "\n\nPlusieurs photos du même visage sont fournies (face, puis profils gauche/droit). Analyse l'ensemble pour une évaluation plus complète."
+      ? "\n\nPlusieurs photos du même visage sont fournies (face, puis profils gauche/droit). Analyse l'ensemble."
       : "";
-  const parts = [SYSTEM_PROMPT + angleNote, ...list.map(toInlineData)];
+  const parts = [SYSTEM_PROMPT + angleNote + intakeToText(intake), ...list.map(toInlineData)];
 
   let lastErr: unknown;
   for (const modelName of modelCandidates()) {

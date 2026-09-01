@@ -10,6 +10,8 @@ import type { ScanAnalysis, Routine } from "@/lib/db/schema";
 export function CenterScanDetail({
   scanId,
   patientLabel,
+  patientPhone,
+  centerName,
   analysis,
   routine,
   image,
@@ -19,6 +21,8 @@ export function CenterScanDetail({
 }: {
   scanId: string;
   patientLabel: string;
+  patientPhone?: string | null;
+  centerName?: string;
   analysis: ScanAnalysis;
   routine: Routine | null;
   image: string | null;
@@ -40,6 +44,17 @@ export function CenterScanDetail({
     else setError(res.error ?? "Échec de l'envoi.");
   }
 
+  const whatsappHref = (() => {
+    const digits = (patientPhone ?? "").replace(/[^\d]/g, "");
+    if (!digits) return null;
+    const prio = analysis.priorities?.[0]?.title;
+    const msg =
+      `Bonjour, voici le résultat de votre analyse de peau chez ${centerName ?? "notre centre"} : ` +
+      `score global ${analysis.overallScore}/100${analysis.skinType ? ` (peau ${analysis.skinType})` : ""}. ` +
+      `${prio ? `Priorité : ${prio}. ` : ""}Le rapport détaillé (PDF) vous est transmis.`;
+    return `https://wa.me/${digits}?text=${encodeURIComponent(msg)}`;
+  })();
+
   return (
     <I18nProvider initialLang="fr">
       <div className="mb-4 mt-2 flex flex-wrap items-center justify-between gap-3">
@@ -48,8 +63,13 @@ export function CenterScanDetail({
           <a href={`/center/scans/${scanId}/report`} className="btn-ghost">
             📄 PDF
           </a>
+          {whatsappHref && (
+            <a href={whatsappHref} target="_blank" rel="noopener noreferrer" className="btn-ghost text-green-700">
+              💬 WhatsApp
+            </a>
+          )}
           <button onClick={doSend} disabled={sending} className="btn-primary">
-            {sent ? "✓ Renvoyer l'email" : sending ? "Envoi…" : "📧 Envoyer au patient"}
+            {sent ? "✓ Renvoyer l'email" : sending ? "Envoi…" : "📧 Email"}
           </button>
         </div>
       </div>

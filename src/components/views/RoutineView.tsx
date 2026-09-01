@@ -15,7 +15,7 @@ const CATEGORY_EMOJI: Record<string, string> = {
 
 export function RoutineView({ routine }: { routine: Routine | null }) {
   const { t } = useI18n();
-  const [tab, setTab] = useState<"morning" | "evening">("morning");
+  const [tab, setTab] = useState<"morning" | "evening" | "shaving">("morning");
 
   if (!routine) {
     return (
@@ -30,23 +30,33 @@ export function RoutineView({ routine }: { routine: Routine | null }) {
     );
   }
 
-  const steps = routine[tab];
+  const hasShaving = Boolean(routine.shaving && routine.shaving.length > 0);
+  const tabs: ("morning" | "evening" | "shaving")[] = hasShaving
+    ? ["morning", "evening", "shaving"]
+    : ["morning", "evening"];
+  const activeTab = tab === "shaving" && !hasShaving ? "morning" : tab;
+  const steps = activeTab === "shaving" ? routine.shaving ?? [] : routine[activeTab];
+  const tabLabel: Record<string, string> = {
+    morning: `🌅 ${t.routine.morning}`,
+    evening: `🌙 ${t.routine.evening}`,
+    shaving: "🪒 Rasage",
+  };
 
   return (
     <div className="animate-fade-in">
       <h1 className="mb-4 text-2xl font-bold">{t.routine.title}</h1>
 
-      {/* Onglets matin / soir */}
+      {/* Onglets matin / soir / rasage */}
       <div className="mb-6 inline-flex rounded-2xl bg-sand-100 p-1">
-        {(["morning", "evening"] as const).map((k) => (
+        {tabs.map((k) => (
           <button
             key={k}
             onClick={() => setTab(k)}
             className={`rounded-xl px-5 py-2 text-sm font-semibold transition ${
-              tab === k ? "bg-white text-ink shadow-soft" : "text-ink-faint"
+              activeTab === k ? "bg-white text-ink shadow-soft" : "text-ink-faint"
             }`}
           >
-            {k === "morning" ? `🌅 ${t.routine.morning}` : `🌙 ${t.routine.evening}`}
+            {tabLabel[k]}
           </button>
         ))}
       </div>

@@ -30,7 +30,7 @@ export async function POST(req: Request) {
     );
   }
 
-  const { patientId, image, images, thumbnail, quality } = await req.json();
+  const { patientId, image, images, thumbnail, quality, qualities, intake } = await req.json();
   // Accepte soit une image unique, soit un tableau (face, profil G, profil D).
   const imageList: string[] = Array.isArray(images)
     ? images.filter((s) => typeof s === "string" && s.startsWith("data:image/"))
@@ -67,7 +67,8 @@ export async function POST(req: Request) {
     imageData: primaryImage,
     images: imageList,
     thumbnailData: typeof thumbnail === "string" ? thumbnail : null,
-    quality: quality ?? null,
+    quality: (Array.isArray(qualities) ? { photos: qualities } : quality) ?? null,
+    intake: intake && typeof intake === "object" ? intake : null,
     status: "pending" as const,
   };
 
@@ -87,13 +88,14 @@ export async function POST(req: Request) {
   }
 
   try {
-    const analysis = await analyzeSkin(imageList);
+    const intakeObj = intake && typeof intake === "object" ? (intake as Record<string, unknown>) : null;
+    const analysis = await analyzeSkin(imageList, intakeObj);
     const [profile] = await db
       .select()
       .from(skinProfiles)
       .where(eq(skinProfiles.userId, patientId))
       .limit(1);
-    const routine = generateRoutine(analysis, profile ?? null);
+    const routine = generateRoutine(analysis, profile ?? null, intakeObj);
 
     await db
       .update(scans)
