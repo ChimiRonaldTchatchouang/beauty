@@ -4,6 +4,7 @@ import { users, skinProfiles } from "./db/schema";
 import { eq } from "drizzle-orm";
 import type { GoogleUser } from "./google";
 import type { Role } from "./auth";
+import { healOnMissing } from "./db/migrate-core";
 
 function superAdminEmails(): string[] {
   return (process.env.SUPER_ADMIN_EMAILS ?? "")
@@ -25,7 +26,9 @@ function superAdminEmails(): string[] {
 export async function resolveUserOnLogin(g: GoogleUser) {
   const isSuperAdmin = superAdminEmails().includes(g.email);
 
-  const [existing] = await db.select().from(users).where(eq(users.email, g.email)).limit(1);
+  const [existing] = await healOnMissing(() =>
+    db.select().from(users).where(eq(users.email, g.email)).limit(1),
+  );
 
   if (existing) {
     const nextRole: Role = isSuperAdmin ? "admin" : existing.role;

@@ -3,6 +3,7 @@ import { db } from "@/lib/db";
 import { users } from "@/lib/db/schema";
 import { eq } from "drizzle-orm";
 import { verifyPassword, createSession, homeForRole } from "@/lib/auth";
+import { healOnMissing } from "@/lib/db/migrate-core";
 
 // Connexion par email + mot de passe (admin et comptes provisionnés).
 export async function POST(req: Request) {
@@ -12,7 +13,9 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Email et mot de passe requis." }, { status: 400 });
     }
     const normalized = String(email).trim().toLowerCase();
-    const [user] = await db.select().from(users).where(eq(users.email, normalized)).limit(1);
+    const [user] = await healOnMissing(() =>
+      db.select().from(users).where(eq(users.email, normalized)).limit(1),
+    );
 
     if (!user || !user.passwordHash) {
       return NextResponse.json({ error: "Identifiants incorrects." }, { status: 401 });

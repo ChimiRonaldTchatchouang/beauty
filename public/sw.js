@@ -1,5 +1,5 @@
 /* SkinScan service worker — PWA installable + fallback hors-ligne basique. */
-const CACHE = "skinscan-v1";
+const CACHE = "skinscan-v2";
 const OFFLINE_URL = "/offline.html";
 const PRECACHE = ["/", OFFLINE_URL, "/manifest.json", "/icons/icon.svg"];
 
@@ -28,10 +28,19 @@ self.addEventListener("fetch", (event) => {
   // On ne met jamais en cache les appels API (analyses, données perso).
   if (url.pathname.startsWith("/api/")) return;
 
-  // Navigations : réseau d'abord, fallback page hors-ligne.
+  // Navigations : réseau d'abord, fallback page hors-ligne (toujours une Response).
   if (request.mode === "navigate") {
     event.respondWith(
-      fetch(request).catch(() => caches.match(OFFLINE_URL)),
+      fetch(request).catch(async () => {
+        const cached = await caches.match(OFFLINE_URL);
+        return (
+          cached ||
+          new Response("Hors ligne", {
+            status: 503,
+            headers: { "Content-Type": "text/plain; charset=utf-8" },
+          })
+        );
+      }),
     );
     return;
   }

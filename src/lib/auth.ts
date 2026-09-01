@@ -5,6 +5,7 @@ import bcrypt from "bcryptjs";
 import { db } from "./db";
 import { users } from "./db/schema";
 import { eq } from "drizzle-orm";
+import { healOnMissing } from "./db/migrate-core";
 
 export async function hashPassword(password: string): Promise<string> {
   return bcrypt.hash(password, 10);
@@ -73,7 +74,9 @@ export async function getSession(): Promise<SessionPayload | null> {
 export async function getCurrentUser() {
   const session = await getSession();
   if (!session) return null;
-  const rows = await db.select().from(users).where(eq(users.id, session.userId)).limit(1);
+  const rows = await healOnMissing(() =>
+    db.select().from(users).where(eq(users.id, session.userId)).limit(1),
+  );
   return rows[0] ?? null;
 }
 

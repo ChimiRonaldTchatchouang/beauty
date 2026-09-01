@@ -58,6 +58,25 @@ function rowsOf(result: unknown): Record<string, unknown>[] {
   return Array.isArray(rows) ? (rows as Record<string, unknown>[]) : [];
 }
 
+let healing: Promise<unknown> | null = null;
+
+/**
+ * Exécute une opération DB ; si le schéma manque une colonne/table, lance
+ * l'installation idempotente (une seule fois en parallèle) puis réessaie.
+ * Rend l'app résiliente aux ajouts de schéma sans redéploiement manuel.
+ */
+export async function healOnMissing<T>(fn: () => Promise<T>): Promise<T> {
+  try {
+    return await fn();
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    if (!/does not exist/i.test(msg)) throw err;
+    if (!healing) healing = runSetup().finally(() => (healing = null));
+    await healing;
+    return await fn();
+  }
+}
+
 export interface SetupResult {
   ok: boolean;
   applied: number;
