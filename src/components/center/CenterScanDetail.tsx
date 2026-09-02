@@ -12,6 +12,7 @@ export function CenterScanDetail({
   patientLabel,
   patientPhone,
   centerName,
+  reportUrl,
   analysis,
   routine,
   image,
@@ -23,6 +24,7 @@ export function CenterScanDetail({
   patientLabel: string;
   patientPhone?: string | null;
   centerName?: string;
+  reportUrl?: string;
   analysis: ScanAnalysis;
   routine: Routine | null;
   image: string | null;
@@ -49,9 +51,10 @@ export function CenterScanDetail({
     if (!digits) return null;
     const prio = analysis.priorities?.[0]?.title;
     const msg =
-      `Bonjour, voici le résultat de votre analyse de peau chez ${centerName ?? "notre centre"} : ` +
+      `Bonjour, voici votre analyse de peau chez ${centerName ?? "notre centre"} : ` +
       `score global ${analysis.overallScore}/100${analysis.skinType ? ` (peau ${analysis.skinType})` : ""}. ` +
-      `${prio ? `Priorité : ${prio}. ` : ""}Le rapport détaillé (PDF) vous est transmis.`;
+      `${prio ? `Priorité : ${prio}. ` : ""}` +
+      `${reportUrl ? `\n\n📄 Votre rapport complet (à télécharger en PDF) : ${reportUrl}` : "Le rapport détaillé vous est transmis."}`;
     return `https://wa.me/${digits}?text=${encodeURIComponent(msg)}`;
   })();
 

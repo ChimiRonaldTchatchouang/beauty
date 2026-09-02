@@ -6,7 +6,7 @@ import { emailConfigured } from "@/lib/email";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
-export const maxDuration = 30;
+export const maxDuration = 60;
 
 // Diagnostic pour le gérant : état des services (IA, licence, email).
 export async function GET() {

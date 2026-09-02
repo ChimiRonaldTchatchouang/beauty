@@ -125,31 +125,37 @@ function toInlineData(dataUrl: string) {
 // on ignore une valeur d'env obsolète et on prévoit une chaîne de repli.
 const DEFAULT_MODEL = "gemini-3.6-flash";
 const DEPRECATED = /^(gemini-(1\.0|1\.5|2\.0)|gemini-pro\b|text-)/i;
+// Modèles de repli (ordre) si le principal est retiré (404) ou saturé (503).
+const FALLBACKS = ["gemini-3.6-flash", "gemini-3.7-flash", "gemini-3.5-flash", "gemini-flash-latest"];
 
-function modelCandidates(): string[] {
+function modelCandidates(limit = 3): string[] {
   const configured = process.env.GEMINI_MODEL?.trim();
   const primary = !configured || DEPRECATED.test(configured) ? DEFAULT_MODEL : configured;
-  // Déduplique en gardant l'ordre : configuré → défaut → alias "latest".
-  return [...new Set([primary, DEFAULT_MODEL, "gemini-flash-latest"])];
+  return [...new Set([primary, ...FALLBACKS])].slice(0, limit);
 }
 
-/** Test de connexion IA (léger) : renvoie le modèle qui répond, ou l'erreur. */
+// Erreur pour laquelle il vaut la peine d'essayer un autre modèle.
+function isSwitchable(msg: string): boolean {
+  return /not found|no longer available|not supported|404|503|overload|unavailable|high demand/i.test(msg);
+}
+
+/** Test de connexion IA (léger, borné) : renvoie le modèle qui répond, ou l'erreur. */
 export async function pingGemini(): Promise<{ ok: boolean; model?: string; error?: string }> {
   const apiKey = process.env.GEMINI_API_KEY;
   if (!apiKey) return { ok: false, error: "GEMINI_API_KEY manquant" };
   const genAI = new GoogleGenerativeAI(apiKey);
   let lastErr = "";
-  for (const modelName of modelCandidates()) {
+  for (const modelName of modelCandidates(3)) {
     try {
       const model = genAI.getGenerativeModel({
         model: modelName,
         generationConfig: { maxOutputTokens: 1000, responseMimeType: "application/json" },
       });
-      await model.generateContent('Réponds en JSON: {"ok":true}');
+      await model.generateContent('Réponds en JSON: {"ok":true}', { timeout: 8000 });
       return { ok: true, model: modelName };
     } catch (err) {
       lastErr = err instanceof Error ? err.message : String(err);
-      if (/not found|no longer available|not supported|404/i.test(lastErr)) continue;
+      if (isSwitchable(lastErr)) continue;
       break;
     }
   }
@@ -197,21 +203,22 @@ export async function analyzeSkin(
   const parts = [SYSTEM_PROMPT + angleNote + intakeToText(intake), ...list.map(toInlineData)];
 
   let lastErr: unknown;
-  for (const modelName of modelCandidates()) {
+  for (const modelName of modelCandidates(3)) {
     try {
       const model = genAI.getGenerativeModel({
         model: modelName,
         generationConfig: { temperature: 0.2, responseMimeType: "application/json" },
       });
-      const result = await model.generateContent(parts);
+      // Timeout court : on préfère basculer de modèle plutôt que laisser expirer.
+      const result = await model.generateContent(parts, { timeout: 16000 });
       return normalizeAnalysis(extractJson(result.response.text()));
     } catch (err) {
       lastErr = err;
       const msg = err instanceof Error ? err.message : String(err);
-      // Modèle indisponible/retiré → on tente le suivant ; sinon on remonte.
-      if (/not found|no longer available|not supported|404/i.test(msg)) continue;
+      // Modèle retiré / saturé / lent → on tente le suivant ; sinon on remonte.
+      if (isSwitchable(msg) || /timeout|timed out|aborted/i.test(msg)) continue;
       throw err;
     }
   }
-  throw lastErr instanceof Error ? lastErr : new Error("Analyse Gemini impossible");
+  throw lastErr instanceof Error ? lastErr : new Error("Analyse Gemini indisponible (réessayez).");
 }

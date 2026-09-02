@@ -107,6 +107,7 @@ export function resultEmailHtml(opts: {
   analysis: ScanAnalysis;
   routine: Routine | null;
   portalUrl: string;
+  reportUrl?: string;
 }): string {
   const brand = opts.brandColor || "#d95b3c";
   const metrics = opts.analysis.metrics
@@ -155,7 +156,8 @@ export function resultEmailHtml(opts: {
       }
 
       <div style="text-align:center;margin-top:24px;">
-        <a href="${opts.portalUrl}" style="display:inline-block;background:${brand};color:#fff;text-decoration:none;font-weight:700;padding:14px 28px;border-radius:14px;font-size:15px;">Voir mon suivi complet</a>
+        ${opts.reportUrl ? `<a href="${opts.reportUrl}" style="display:inline-block;background:${brand};color:#fff;text-decoration:none;font-weight:700;padding:14px 28px;border-radius:14px;font-size:15px;">📄 Télécharger mon rapport (PDF)</a><br/><br/>` : ""}
+        <a href="${opts.portalUrl}" style="display:inline-block;color:${brand};text-decoration:none;font-weight:600;font-size:14px;">Voir mon suivi complet →</a>
       </div>
       <p style="margin:18px 0 0;color:#a49a92;font-size:12px;text-align:center;line-height:1.5;">Analyse cosmétique — aucun diagnostic médical. Connectez-vous avec Google (même adresse email) pour retrouver votre historique.</p>
     </div>

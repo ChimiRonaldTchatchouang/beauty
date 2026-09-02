@@ -147,40 +147,37 @@ function Flow({ patients, preselected }: { patients: Patient[]; preselected: str
   async function analyze(images: string[], imgQualities: QualityResult[]) {
     setPhase("analyzing");
     const thumbnail = await makeThumbnail(images[0]).catch(() => null);
-    let attempt = 0;
-    while (attempt < 3) {
-      try {
-        const res = await fetch("/api/center/scan", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ patientId, images, thumbnail, qualities: imgQualities, intake }),
-        });
-        if (res.status === 402) {
-          setError("Quota de scans atteint ou licence inactive.");
-          setPhase("error");
-          return;
-        }
-        const data = await res.json().catch(() => ({}));
-        if (!res.ok) {
-          // Message clair (souvent : quota/facturation Gemini).
-          setError(data.hint || data.detail || "L'analyse IA a échoué.");
-          setPhase("error");
-          return;
-        }
-        setAnalysis(data.analysis as ScanAnalysis);
-        setScanId(data.id as string);
-        setPhase("results");
-        router.refresh();
+    try {
+      // Un seul envoi : l'analyse est coûteuse, on ne relance pas en boucle
+      // (sinon on créerait des scans en double). Le serveur gère déjà les replis.
+      const res = await fetch("/api/center/scan", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ patientId, images, thumbnail, qualities: imgQualities, intake }),
+      });
+      if (res.status === 402) {
+        setError("Quota de scans atteint ou licence inactive.");
+        setPhase("error");
         return;
-      } catch {
-        attempt++;
-        if (attempt >= 3) {
-          setError("Problème de connexion. Vérifiez le réseau et réessayez.");
-          setPhase("error");
-          return;
-        }
-        await new Promise((r) => setTimeout(r, 1000 * 2 ** attempt));
       }
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        const overloaded = res.status === 504 || /overload|unavailable|high demand|503|timeout/i.test(JSON.stringify(data));
+        setError(
+          overloaded
+            ? "L'IA est momentanément très sollicitée. Réessayez dans quelques secondes."
+            : data.hint || data.detail || "L'analyse a échoué. Réessayez.",
+        );
+        setPhase("error");
+        return;
+      }
+      setAnalysis(data.analysis as ScanAnalysis);
+      setScanId(data.id as string);
+      setPhase("results");
+      router.refresh();
+    } catch {
+      setError("Problème de connexion. Vérifiez le réseau et réessayez.");
+      setPhase("error");
     }
   }
 

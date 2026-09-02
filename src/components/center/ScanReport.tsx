@@ -27,6 +27,7 @@ export function ScanReport({
   image,
   images,
   photoQualities,
+  backHref = "../",
 }: {
   centerName: string;
   centerLogo: string | null;
@@ -38,13 +39,18 @@ export function ScanReport({
   image: string | null;
   images: string[] | null;
   photoQualities: { ok?: boolean; reason?: string }[] | null;
+  backHref?: string | null;
 }) {
   const dateStr = new Date(date).toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" });
 
   return (
     <I18nProvider initialLang="fr">
       <div className="no-print mb-5 flex items-center justify-between gap-3">
-        <a href="../" className="text-sm font-medium text-ink-soft">← Retour</a>
+        {backHref ? (
+          <a href={backHref} className="text-sm font-medium text-ink-soft">← Retour</a>
+        ) : (
+          <span className="text-sm font-semibold">{centerName}</span>
+        )}
         <button onClick={() => window.print()} className="btn-primary">📄 Télécharger le PDF</button>
       </div>
 

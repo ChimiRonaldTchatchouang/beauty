@@ -13,6 +13,7 @@ import { and, eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { getSession } from "@/lib/auth";
 import { sendEmail, resultEmailHtml, emailConfigured } from "@/lib/email";
+import { reportShareUrl } from "@/lib/share";
 
 async function requireCenter() {
   const session = await getSession();
@@ -120,6 +121,7 @@ export async function sendResults(scanId: string): Promise<ActionResult> {
     analysis: scan.analysis,
     routine: scan.routine ?? null,
     portalUrl,
+    reportUrl: reportShareUrl(scan.id),
   });
 
   const result = await sendEmail({
