@@ -13,7 +13,9 @@ import { and, eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { getSession } from "@/lib/auth";
 import { sendEmail, resultEmailHtml, emailConfigured } from "@/lib/email";
-import { reportShareUrl } from "@/lib/share";
+import { reportShareUrl, reportPdfUrl } from "@/lib/share";
+import { generateReportPdf } from "@/lib/pdf";
+import { sendWhatsAppDocument, whatsappConfigured } from "@/lib/whatsapp";
 
 async function requireCenter() {
   const session = await getSession();
@@ -121,14 +123,34 @@ export async function sendResults(scanId: string): Promise<ActionResult> {
     analysis: scan.analysis,
     routine: scan.routine ?? null,
     portalUrl,
-    reportUrl: reportShareUrl(scan.id),
+    reportUrl: reportPdfUrl(scan.id),
   });
+
+  // Génère le vrai PDF et le joint à l'email.
+  let attachments: { filename: string; content: string }[] | undefined;
+  try {
+    const d = scan.createdAt;
+    const scanRef = `SCAN-${d.getUTCFullYear()}${String(d.getUTCMonth() + 1).padStart(2, "0")}${String(d.getUTCDate()).padStart(2, "0")}-${scan.id.slice(0, 4).toUpperCase()}`;
+    const pdf = await generateReportPdf({
+      center: { name: center?.name ?? "SkinScan", city: center?.city, contactEmail: center?.contactEmail, contactPhone: center?.contactPhone },
+      patientLabel: patient.name ?? "Patient",
+      scanRef,
+      date: d.toISOString(),
+      analysis: scan.analysis,
+      routine: scan.routine ?? null,
+      image: scan.imageData,
+    });
+    attachments = [{ filename: `rapport-${scanRef}.pdf`, content: Buffer.from(pdf).toString("base64") }];
+  } catch (e) {
+    console.error("[sendResults] pdf", e);
+  }
 
   const result = await sendEmail({
     to: patient.email,
     subject: `Vos résultats de peau — ${center?.name ?? "SkinScan"}`,
     html,
     replyTo: center?.contactEmail ?? undefined,
+    attachments,
   });
 
   await db.insert(resultEmails).values({
@@ -146,6 +168,63 @@ export async function sendResults(scanId: string): Promise<ActionResult> {
     return { ok: true };
   }
   return { ok: false, error: result.error };
+}
+
+/** Envoie le PDF du scan au patient sur WhatsApp (API Cloud). */
+export async function sendWhatsappReport(scanId: string): Promise<ActionResult> {
+  const s = await requireCenter();
+  if (!whatsappConfigured()) return { ok: false, error: "whatsapp_not_configured" };
+
+  const [scan] = await db
+    .select()
+    .from(scans)
+    .where(and(eq(scans.id, scanId), eq(scans.centerId, s.centerId)))
+    .limit(1);
+  if (!scan?.analysis) return { ok: false, error: "Scan introuvable." };
+
+  const [patient] = await db.select().from(users).where(eq(users.id, scan.patientId)).limit(1);
+  if (!patient?.phone) return { ok: false, error: "Ce patient n'a pas de numéro WhatsApp." };
+  const [center] = await db.select().from(centers).where(eq(centers.id, s.centerId)).limit(1);
+
+  const prio = scan.analysis.priorities?.[0]?.title;
+  const caption =
+    `Votre analyse de peau chez ${center?.name ?? "notre centre"} : score ${scan.analysis.overallScore}/100` +
+    `${scan.analysis.skinType ? ` (peau ${scan.analysis.skinType})` : ""}.${prio ? ` Priorité : ${prio}.` : ""}`;
+
+  const res = await sendWhatsAppDocument({
+    to: patient.phone,
+    link: reportPdfUrl(scan.id),
+    filename: "rapport-analyse-peau.pdf",
+    caption,
+  });
+  return res.ok ? { ok: true } : { ok: false, error: res.error };
+}
+
+/** Met à jour les informations d'identité d'un patient. */
+export async function updatePatientInfo(formData: FormData): Promise<ActionResult> {
+  const s = await requireCenter();
+  const patientId = String(formData.get("patientId") ?? "");
+  const [patient] = await db
+    .select()
+    .from(users)
+    .where(and(eq(users.id, patientId), eq(users.centerId, s.centerId)))
+    .limit(1);
+  if (!patient) return { ok: false, error: "Patient introuvable." };
+
+  const name = String(formData.get("name") ?? "").trim() || null;
+  const phone = String(formData.get("phone") ?? "").trim() || null;
+  const email = String(formData.get("email") ?? "").trim().toLowerCase();
+  if (!email) return { ok: false, error: "Email requis." };
+
+  // Vérifie l'unicité de l'email si modifié.
+  if (email !== patient.email) {
+    const [clash] = await db.select({ id: users.id }).from(users).where(eq(users.email, email)).limit(1);
+    if (clash && clash.id !== patientId) return { ok: false, error: "Cet email est déjà utilisé." };
+  }
+
+  await db.update(users).set({ name, phone, email }).where(eq(users.id, patientId));
+  revalidatePath(`/center/patients/${patientId}`);
+  return { ok: true };
 }
 
 /** Crée un rendez-vous pour un patient du centre. */

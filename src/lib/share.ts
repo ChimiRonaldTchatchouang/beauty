@@ -29,3 +29,9 @@ export function reportShareUrl(scanId: string): string {
   const base = process.env.NEXT_PUBLIC_APP_URL?.replace(/\/$/, "") ?? "";
   return `${base}/r/${shareToken(scanId)}`;
 }
+
+// Lien direct vers le vrai fichier PDF (téléchargement / WhatsApp / email).
+export function reportPdfUrl(scanId: string): string {
+  const base = process.env.NEXT_PUBLIC_APP_URL?.replace(/\/$/, "") ?? "";
+  return `${base}/api/report/${shareToken(scanId)}`;
+}

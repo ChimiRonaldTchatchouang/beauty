@@ -6,6 +6,7 @@ import { and, eq, sql } from "drizzle-orm";
 import { getLicenseState } from "@/lib/license";
 import { LicenseControls } from "@/components/admin/LicenseControls";
 import { ResetPasswordButton } from "@/components/admin/ResetPasswordButton";
+import { DeleteCenterButton } from "@/components/admin/DeleteCenterButton";
 
 export default async function CenterDetailPage({
   params,
@@ -31,10 +32,15 @@ export default async function CenterDetailPage({
       <Link href="/admin/centers" className="text-sm font-medium text-ink-soft">
         ← Centres
       </Link>
-      <h1 className="mt-2 text-2xl font-bold">{center.name}</h1>
-      <p className="text-ink-faint">
-        {center.city ?? "—"} · {center.contactEmail}
-      </p>
+      <div className="mt-2 flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <h1 className="text-2xl font-bold">{center.name}</h1>
+          <p className="text-ink-faint">
+            {center.city ?? "—"} · {center.contactEmail}
+          </p>
+        </div>
+        <DeleteCenterButton centerId={center.id} centerName={center.name} />
+      </div>
 
       <div className="mt-6 grid gap-4 sm:grid-cols-3">
         <Stat label="Patients" value={patientCount} />

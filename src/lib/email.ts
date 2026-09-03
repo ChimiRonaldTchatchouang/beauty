@@ -20,6 +20,7 @@ export async function sendEmail(opts: {
   subject: string;
   html: string;
   replyTo?: string;
+  attachments?: { filename: string; content: string }[]; // content = base64
 }): Promise<SendResult> {
   const apiKey = process.env.RESEND_API_KEY;
   const from = process.env.RESEND_FROM;
@@ -38,6 +39,7 @@ export async function sendEmail(opts: {
         subject: opts.subject,
         html: opts.html,
         ...(opts.replyTo ? { reply_to: opts.replyTo } : {}),
+        ...(opts.attachments ? { attachments: opts.attachments } : {}),
       }),
     });
     const data = await res.json().catch(() => ({}));

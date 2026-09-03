@@ -5,7 +5,8 @@ import { db } from "@/lib/db";
 import { scans, users, centers } from "@/lib/db/schema";
 import { and, eq } from "drizzle-orm";
 import { CenterScanDetail } from "@/components/center/CenterScanDetail";
-import { reportShareUrl } from "@/lib/share";
+import { reportPdfUrl } from "@/lib/share";
+import { whatsappConfigured } from "@/lib/whatsapp";
 
 export default async function CenterScanPage({
   params,
@@ -36,7 +37,8 @@ export default async function CenterScanPage({
         patientLabel={patient?.name ?? patient?.email ?? "Patient"}
         patientPhone={patient?.phone ?? null}
         centerName={center?.name ?? "votre centre"}
-        reportUrl={reportShareUrl(scan.id)}
+        reportUrl={reportPdfUrl(scan.id)}
+        whatsappAuto={whatsappConfigured()}
         analysis={scan.analysis}
         routine={scan.routine ?? null}
         image={scan.imageData}

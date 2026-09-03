@@ -162,6 +162,23 @@ export async function setCenterActive(centerId: string, active: boolean): Promis
   return { ok: true };
 }
 
+/**
+ * Supprime un centre ET toutes ses données liées (patients, scans, routines,
+ * rendez-vous, licences, produits, comptes staff). Action irréversible.
+ */
+export async function deleteCenter(centerId: string): Promise<ActionResult> {
+  await requireAdmin();
+  // 1) Supprime tous les utilisateurs du centre (patients + staff) → cascade
+  //    sur leurs scans, profils, rendez-vous.
+  await db.delete(users).where(eq(users.centerId, centerId));
+  // 2) Supprime le centre → cascade sur licences, produits, transactions,
+  //    scans/rendez-vous restants rattachés au centre.
+  await db.delete(centers).where(eq(centers.id, centerId));
+  revalidatePath("/admin");
+  revalidatePath("/admin/centers");
+  return { ok: true };
+}
+
 export interface ResetPasswordResult extends ActionResult {
   password?: string;
 }

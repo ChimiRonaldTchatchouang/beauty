@@ -6,6 +6,7 @@ import { users, skinProfiles, scans, appointments } from "@/lib/db/schema";
 import { and, desc, eq } from "drizzle-orm";
 import { scoreColor } from "@/lib/colors";
 import { PatientProfileForm } from "@/components/center/PatientProfileForm";
+import { PatientInfoForm } from "@/components/center/PatientInfoForm";
 import { AppointmentForm } from "@/components/center/AppointmentForm";
 import { AppointmentStatusButtons } from "@/components/center/AppointmentStatusButtons";
 
@@ -25,17 +26,16 @@ export default async function PatientDetailPage({
     .limit(1);
   if (!patient) notFound();
 
-  const [profile] = await db.select().from(skinProfiles).where(eq(skinProfiles.userId, id)).limit(1);
-  const patientScans = await db
-    .select({ id: scans.id, overallScore: scans.overallScore, createdAt: scans.createdAt, emailedAt: scans.emailedAt, thumb: scans.thumbnailData })
-    .from(scans)
-    .where(and(eq(scans.patientId, id), eq(scans.status, "analyzed")))
-    .orderBy(desc(scans.createdAt));
-  const patientAppointments = await db
-    .select()
-    .from(appointments)
-    .where(eq(appointments.patientId, id))
-    .orderBy(desc(appointments.scheduledAt));
+  // Perf : les 3 requêtes en parallèle (au lieu de séquentiel) → page plus rapide.
+  const [[profile], patientScans, patientAppointments] = await Promise.all([
+    db.select().from(skinProfiles).where(eq(skinProfiles.userId, id)).limit(1),
+    db
+      .select({ id: scans.id, overallScore: scans.overallScore, createdAt: scans.createdAt, emailedAt: scans.emailedAt, thumb: scans.thumbnailData })
+      .from(scans)
+      .where(and(eq(scans.patientId, id), eq(scans.status, "analyzed")))
+      .orderBy(desc(scans.createdAt)),
+    db.select().from(appointments).where(eq(appointments.patientId, id)).orderBy(desc(appointments.scheduledAt)),
+  ]);
 
   return (
     <div className="animate-fade-in">
@@ -112,9 +112,14 @@ export default async function PatientDetailPage({
           </div>
         </div>
 
-        {/* Profil peau éditable */}
+        {/* Infos patient + Profil peau éditables */}
         <div>
-          <h2 className="mb-3 text-lg font-bold">Profil peau</h2>
+          <div className="mb-3 flex items-center justify-between">
+            <h2 className="text-lg font-bold">Informations</h2>
+            <PatientInfoForm patientId={patient.id} name={patient.name} email={patient.email} phone={patient.phone} />
+          </div>
+
+          <h2 className="mb-3 mt-6 text-lg font-bold">Profil peau</h2>
           <PatientProfileForm
             patientId={patient.id}
             profile={{

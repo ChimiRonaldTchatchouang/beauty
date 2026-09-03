@@ -4,7 +4,7 @@ import { useState } from "react";
 import { I18nProvider } from "@/lib/i18n/context";
 import { ResultsView } from "@/components/views/ResultsView";
 import { RoutineView } from "@/components/views/RoutineView";
-import { sendResults } from "@/lib/actions/center";
+import { sendResults, sendWhatsappReport } from "@/lib/actions/center";
 import type { ScanAnalysis, Routine } from "@/lib/db/schema";
 
 export function CenterScanDetail({
@@ -13,6 +13,7 @@ export function CenterScanDetail({
   patientPhone,
   centerName,
   reportUrl,
+  whatsappAuto,
   analysis,
   routine,
   image,
@@ -25,6 +26,7 @@ export function CenterScanDetail({
   patientPhone?: string | null;
   centerName?: string;
   reportUrl?: string;
+  whatsappAuto?: boolean;
   analysis: ScanAnalysis;
   routine: Routine | null;
   image: string | null;
@@ -35,6 +37,8 @@ export function CenterScanDetail({
   const [tab, setTab] = useState<"results" | "routine">("results");
   const [sending, setSending] = useState(false);
   const [sent, setSent] = useState(emailed);
+  const [waSending, setWaSending] = useState(false);
+  const [waSent, setWaSent] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   async function doSend() {
@@ -46,31 +50,48 @@ export function CenterScanDetail({
     else setError(res.error ?? "Échec de l'envoi.");
   }
 
-  const whatsappHref = (() => {
-    const digits = (patientPhone ?? "").replace(/[^\d]/g, "");
+  const digits = (patientPhone ?? "").replace(/[^\d]/g, "");
+  const waLinkHref = (() => {
     if (!digits) return null;
     const prio = analysis.priorities?.[0]?.title;
     const msg =
       `Bonjour, voici votre analyse de peau chez ${centerName ?? "notre centre"} : ` +
       `score global ${analysis.overallScore}/100${analysis.skinType ? ` (peau ${analysis.skinType})` : ""}. ` +
       `${prio ? `Priorité : ${prio}. ` : ""}` +
-      `${reportUrl ? `\n\n📄 Votre rapport complet (à télécharger en PDF) : ${reportUrl}` : "Le rapport détaillé vous est transmis."}`;
+      `${reportUrl ? `\n\n📄 Votre rapport (PDF) : ${reportUrl}` : ""}`;
     return `https://wa.me/${digits}?text=${encodeURIComponent(msg)}`;
   })();
+
+  // Envoi auto du PDF via l'API WhatsApp Cloud (si configurée).
+  async function doWhatsapp() {
+    setWaSending(true);
+    setError(null);
+    const res = await sendWhatsappReport(scanId);
+    setWaSending(false);
+    if (res.ok) setWaSent(true);
+    else setError(res.error === "whatsapp_not_configured" ? "API WhatsApp non configurée." : res.error ?? "Échec WhatsApp.");
+  }
 
   return (
     <I18nProvider initialLang="fr">
       <div className="mb-4 mt-2 flex flex-wrap items-center justify-between gap-3">
         <h1 className="text-2xl font-bold">{patientLabel}</h1>
-        <div className="flex gap-2">
-          <a href={`/center/scans/${scanId}/report`} className="btn-ghost">
+        <div className="flex flex-wrap gap-2">
+          <a href={reportUrl ?? `/center/scans/${scanId}/report`} target="_blank" rel="noopener noreferrer" className="btn-ghost">
             📄 PDF
           </a>
-          {whatsappHref && (
-            <a href={whatsappHref} target="_blank" rel="noopener noreferrer" className="btn-ghost text-green-700">
-              💬 WhatsApp
-            </a>
-          )}
+          {digits &&
+            (whatsappAuto ? (
+              <button onClick={doWhatsapp} disabled={waSending || waSent} className="btn-ghost text-green-700">
+                {waSent ? "✓ PDF envoyé" : waSending ? "Envoi…" : "💬 Envoyer le PDF"}
+              </button>
+            ) : (
+              waLinkHref && (
+                <a href={waLinkHref} target="_blank" rel="noopener noreferrer" className="btn-ghost text-green-700">
+                  💬 WhatsApp
+                </a>
+              )
+            ))}
           <button onClick={doSend} disabled={sending} className="btn-primary">
             {sent ? "✓ Renvoyer l'email" : sending ? "Envoi…" : "📧 Email"}
           </button>
