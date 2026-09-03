@@ -6,6 +6,9 @@ import { users, scans, appointments, scanMetrics } from "@/lib/db/schema";
 import { and, asc, desc, eq, gte, sql } from "drizzle-orm";
 import { getLicenseState } from "@/lib/license";
 import { LicenseBanner } from "@/components/center/LicenseBanner";
+import { Card } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 
 export default async function CenterDashboard() {
   const session = await getSession();
@@ -58,15 +61,15 @@ export default async function CenterDashboard() {
       </div>
 
       <div className="mt-6">
-        <Link href="/center/scan" className="btn-primary w-full sm:w-auto">
-          + Scanner un patient
-        </Link>
+        <Button asChild size="lg">
+          <Link href="/center/scan">+ Scanner un patient</Link>
+        </Button>
       </div>
 
       <div className="mt-8 grid gap-6 lg:grid-cols-2">
         <div>
           <h2 className="mb-3 text-lg font-bold">Prochains rendez-vous</h2>
-          <div className="overflow-hidden rounded-3xl bg-white shadow-soft">
+          <Card className="overflow-hidden p-0">
             {upcoming.length === 0 ? (
               <p className="p-4 text-sm text-ink-soft">Aucun rendez-vous planifié.</p>
             ) : (
@@ -76,18 +79,18 @@ export default async function CenterDashboard() {
                     <p className="font-medium">{a.patientName ?? a.patientEmail}</p>
                     <p className="text-xs text-ink-faint">{a.reason ?? "Consultation"}</p>
                   </div>
-                  <p className="text-sm text-ink-soft">
+                  <Badge variant="neutral">
                     {new Date(a.scheduledAt).toLocaleString("fr-FR", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" })}
-                  </p>
+                  </Badge>
                 </div>
               ))
             )}
-          </div>
+          </Card>
         </div>
 
         <div>
           <h2 className="mb-3 text-lg font-bold">Problèmes les plus fréquents</h2>
-          <div className="overflow-hidden rounded-3xl bg-white shadow-soft">
+          <Card className="overflow-hidden p-0">
             {topConcerns.length === 0 ? (
               <p className="p-4 text-sm text-ink-soft">Pas encore de données de scan.</p>
             ) : (
@@ -98,7 +101,7 @@ export default async function CenterDashboard() {
                 </div>
               ))
             )}
-          </div>
+          </Card>
         </div>
       </div>
     </div>
@@ -117,10 +120,10 @@ const CATEGORY_LABEL: Record<string, string> = {
 
 function Stat({ label, value, href }: { label: string; value: string | number; href?: string }) {
   const inner = (
-    <div className="card">
+    <Card className="transition hover:shadow-soft">
       <p className="text-3xl font-bold text-brand-600">{value}</p>
       <p className="text-sm text-ink-faint">{label}</p>
-    </div>
+    </Card>
   );
   return href ? <Link href={href}>{inner}</Link> : inner;
 }

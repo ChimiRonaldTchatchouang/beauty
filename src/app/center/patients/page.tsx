@@ -5,6 +5,8 @@ import { db } from "@/lib/db";
 import { users, scans } from "@/lib/db/schema";
 import { and, desc, eq, sql } from "drizzle-orm";
 import { CreatePatientForm } from "@/components/center/CreatePatientForm";
+import { Card } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
 
 export default async function PatientsPage() {
   const session = await getSession();
@@ -32,13 +34,13 @@ export default async function PatientsPage() {
       </div>
 
       {patients.length === 0 ? (
-        <div className="card text-center">
+        <Card className="text-center">
           <div className="mb-2 text-4xl">🧑‍🤝‍🧑</div>
           <p className="font-semibold">Aucun patient enregistré</p>
           <p className="mt-1 text-sm text-ink-soft">Ajoutez un patient pour lancer un premier scan.</p>
-        </div>
+        </Card>
       ) : (
-        <div className="overflow-hidden rounded-3xl bg-white shadow-soft">
+        <Card className="overflow-hidden p-0">
           {patients.map((p) => (
             <Link
               key={p.id}
@@ -54,14 +56,17 @@ export default async function PatientsPage() {
                   {p.scanCount} scan(s) · {p.activated ? "compte actif" : "en attente de 1re connexion"}
                 </p>
               </div>
+              {p.activated ? (
+                <Badge variant="success">actif</Badge>
+              ) : (
+                <Badge variant="warning">invité</Badge>
+              )}
               {p.lastScore != null && (
-                <span className="rounded-full bg-sand-100 px-2.5 py-1 text-sm font-bold text-ink">
-                  {p.lastScore}
-                </span>
+                <Badge variant="neutral" className="text-sm">{p.lastScore}</Badge>
               )}
             </Link>
           ))}
-        </div>
+        </Card>
       )}
     </div>
   );
