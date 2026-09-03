@@ -44,6 +44,15 @@ export async function createCenter(formData: FormData): Promise<CreateCenterResu
   const plan = String(formData.get("plan") ?? "trial") as Plan;
   if (!name || !adminEmail) return { ok: false, error: "Nom et email du gérant requis." };
 
+  // On n'utilise jamais l'email super-admin comme gérant (créerait un conflit de rôle).
+  const superAdmins = (process.env.SUPER_ADMIN_EMAILS ?? "")
+    .split(",")
+    .map((e) => e.trim().toLowerCase())
+    .filter(Boolean);
+  if (superAdmins.includes(adminEmail)) {
+    return { ok: false, error: "Cet email est celui de l'administrateur : utilisez un autre email pour le gérant du centre." };
+  }
+
   const [center] = await db
     .insert(centers)
     .values({

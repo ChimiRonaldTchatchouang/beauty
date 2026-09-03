@@ -1,8 +1,9 @@
 import { redirect } from "next/navigation";
-import { getSession, homeForRole } from "@/lib/auth";
+import { getCurrentUser, homeForRole } from "@/lib/auth";
 
 export default async function RootPage() {
-  const session = await getSession();
-  if (session) redirect(homeForRole(session.role));
+  // Source de vérité = la base (le rôle peut avoir changé après la connexion).
+  const user = await getCurrentUser();
+  if (user) redirect(homeForRole(user.role));
   redirect("/login");
 }

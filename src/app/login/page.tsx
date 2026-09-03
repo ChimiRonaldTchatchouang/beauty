@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { getSession, homeForRole } from "@/lib/auth";
+import { getCurrentUser, homeForRole } from "@/lib/auth";
 import { redirect } from "next/navigation";
 import { SparkleIcon, GoogleIcon } from "@/components/icons";
 import { PasswordLoginForm } from "@/components/PasswordLoginForm";
@@ -15,8 +15,8 @@ export default async function LoginPage({
 }: {
   searchParams: Promise<{ error?: string; next?: string }>;
 }) {
-  const session = await getSession();
-  if (session) redirect(homeForRole(session.role));
+  const user = await getCurrentUser();
+  if (user) redirect(homeForRole(user.role));
   const { error } = await searchParams;
 
   return (

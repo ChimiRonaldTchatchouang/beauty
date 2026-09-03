@@ -124,11 +124,11 @@ export async function runSetup(): Promise<SetupResult> {
     );
     if (existing.length > 0) {
       if (existing[0].password_hash) {
-        await db.execute(sql`update users set role = 'admin', activated = true where email = ${email}`);
+        await db.execute(sql`update users set role = 'admin', activated = true, center_id = null where email = ${email}`);
       } else {
         const hash = await bcrypt.hash(password, 10);
         await db.execute(
-          sql`update users set role = 'admin', activated = true, password_hash = ${hash} where email = ${email}`,
+          sql`update users set role = 'admin', activated = true, center_id = null, password_hash = ${hash} where email = ${email}`,
         );
       }
       admin = "updated";
