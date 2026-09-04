@@ -4,6 +4,8 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useI18n } from "@/lib/i18n/context";
 import type { Lang } from "@/lib/i18n/dictionaries";
+import { Card } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 
 export function MeProfile({
   user,
@@ -94,9 +96,9 @@ export function MeProfile({
         </button>
       </Section>
 
-      <button onClick={logout} className="btn-ghost mt-2 w-full text-brand-600">
+      <Button onClick={logout} variant="outline" className="mt-2 w-full text-brand-600">
         {t.profile.logout}
-      </button>
+      </Button>
 
       <p className="mt-6 text-center text-xs text-ink-faint">
         SkinScan · Analyse cosmétique, aucun diagnostic médical.
@@ -109,7 +111,7 @@ function Section({ title, children }: { title: string; children: React.ReactNode
   return (
     <div className="mb-5">
       <h2 className="mb-2 px-1 text-sm font-semibold text-ink-faint">{title}</h2>
-      <div className="overflow-hidden rounded-3xl bg-white shadow-soft">{children}</div>
+      <Card className="overflow-hidden p-0">{children}</Card>
     </div>
   );
 }
