@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useI18n } from "@/lib/i18n/context";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import type { Routine, RoutineStep } from "@/lib/db/schema";
 
 const CATEGORY_EMOJI: Record<string, string> = {
@@ -47,19 +48,15 @@ export function RoutineView({ routine }: { routine: Routine | null }) {
       <h1 className="mb-4 text-2xl font-bold">{t.routine.title}</h1>
 
       {/* Onglets matin / soir / rasage */}
-      <div className="mb-6 inline-flex rounded-2xl bg-sand-100 p-1">
-        {tabs.map((k) => (
-          <button
-            key={k}
-            onClick={() => setTab(k)}
-            className={`rounded-xl px-5 py-2 text-sm font-semibold transition ${
-              activeTab === k ? "bg-white text-ink shadow-soft" : "text-ink-faint"
-            }`}
-          >
-            {tabLabel[k]}
-          </button>
-        ))}
-      </div>
+      <Tabs value={activeTab} onValueChange={(v) => setTab(v as "morning" | "evening" | "shaving")} className="mb-6 block">
+        <TabsList>
+          {tabs.map((k) => (
+            <TabsTrigger key={k} value={k}>
+              {tabLabel[k]}
+            </TabsTrigger>
+          ))}
+        </TabsList>
+      </Tabs>
 
       <div className="lg:grid lg:grid-cols-2 lg:gap-6">
         {/* Étapes numérotées */}

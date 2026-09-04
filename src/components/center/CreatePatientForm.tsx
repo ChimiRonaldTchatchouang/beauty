@@ -3,6 +3,10 @@
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { createPatient } from "@/lib/actions/center";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogTrigger } from "@/components/ui/dialog";
 
 export function CreatePatientForm({ redirectToScan = false }: { redirectToScan?: boolean }) {
   const [open, setOpen] = useState(false);
@@ -24,36 +28,40 @@ export function CreatePatientForm({ redirectToScan = false }: { redirectToScan?:
     });
   }
 
-  if (!open) {
-    return (
-      <button onClick={() => setOpen(true)} className="btn-primary">
-        + Nouveau patient
-      </button>
-    );
-  }
-
   return (
-    <div className="fixed inset-0 z-50 grid place-items-center bg-black/40 p-4" onClick={() => setOpen(false)}>
-      <div className="w-full max-w-md rounded-3xl bg-white p-6 shadow-soft" onClick={(e) => e.stopPropagation()}>
-        <h2 className="mb-1 text-lg font-bold">Nouveau patient</h2>
-        <p className="mb-4 text-sm text-ink-soft">
-          L'email Google du patient lui permettra de retrouver ses résultats.
-        </p>
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogTrigger asChild>
+        <Button>+ Nouveau patient</Button>
+      </DialogTrigger>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Nouveau patient</DialogTitle>
+          <DialogDescription>L'email Google du patient lui permettra de retrouver ses résultats.</DialogDescription>
+        </DialogHeader>
         <form action={submit} className="flex flex-col gap-3">
-          <input name="name" className="field" placeholder="Nom du patient" />
-          <input name="email" type="email" className="field" placeholder="Email Google du patient" required />
-          <input name="phone" type="tel" className="field" placeholder="Téléphone WhatsApp (ex. +237…)" />
+          <div className="grid gap-1.5">
+            <Label htmlFor="cp-name">Nom</Label>
+            <Input id="cp-name" name="name" placeholder="Nom du patient" />
+          </div>
+          <div className="grid gap-1.5">
+            <Label htmlFor="cp-email">Email</Label>
+            <Input id="cp-email" name="email" type="email" placeholder="patient@email.com" required />
+          </div>
+          <div className="grid gap-1.5">
+            <Label htmlFor="cp-phone">Téléphone WhatsApp</Label>
+            <Input id="cp-phone" name="phone" type="tel" placeholder="+237…" />
+          </div>
           {error && <p className="text-sm text-brand-600">{error}</p>}
           <div className="mt-2 flex gap-2">
-            <button type="button" onClick={() => setOpen(false)} className="btn-ghost flex-1">
+            <Button type="button" variant="outline" className="flex-1" onClick={() => setOpen(false)}>
               Annuler
-            </button>
-            <button className="btn-primary flex-1" disabled={pending}>
+            </Button>
+            <Button className="flex-1" disabled={pending}>
               {pending ? "…" : "Ajouter"}
-            </button>
+            </Button>
           </div>
         </form>
-      </div>
-    </div>
+      </DialogContent>
+    </Dialog>
   );
 }

@@ -3,6 +3,11 @@
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { createCenter, type CreateCenterResult } from "@/lib/actions/admin";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Select } from "@/components/ui/select";
+import { Label } from "@/components/ui/label";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 
 export function CreateCenterForm() {
   const [open, setOpen] = useState(false);
@@ -20,95 +25,90 @@ export function CreateCenterForm() {
     });
   }
 
-  function close() {
-    setOpen(false);
-    setCreated(null);
-    setError(null);
-    router.refresh();
-  }
-
-  if (!open) {
-    return (
-      <button onClick={() => setOpen(true)} className="btn-primary">
-        + Nouveau centre
-      </button>
-    );
+  function onOpenChange(v: boolean) {
+    setOpen(v);
+    if (!v) {
+      setCreated(null);
+      setError(null);
+      router.refresh();
+    }
   }
 
   return (
-    <div className="fixed inset-0 z-50 grid place-items-center bg-black/40 p-4" onClick={close}>
-      <div className="w-full max-w-md rounded-3xl bg-white p-6 shadow-soft" onClick={(e) => e.stopPropagation()}>
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogTrigger asChild>
+        <Button>+ Nouveau centre</Button>
+      </DialogTrigger>
+      <DialogContent>
         {created ? (
           <div>
             <div className="mb-2 text-3xl">✅</div>
-            <h2 className="text-lg font-bold">Centre créé</h2>
+            <DialogHeader>
+              <DialogTitle>Centre créé</DialogTitle>
+            </DialogHeader>
             <p className="mt-1 text-sm text-ink-soft">
               {created.emailSent
                 ? "Les accès ont été envoyés par email au gérant."
                 : "⚠️ L'email n'a pas pu être envoyé. Communiquez ces accès au gérant :"}
             </p>
-
             <div className="mt-4 rounded-2xl bg-sand-50 p-4 text-sm">
-              <p className="mb-1">
-                Email : <strong>{created.email}</strong>
-              </p>
-              <p>
-                Mot de passe :{" "}
-                <strong className="select-all tracking-wide">{created.tempPassword}</strong>
-              </p>
+              <p className="mb-1">Email : <strong>{created.email}</strong></p>
+              <p>Mot de passe : <strong className="select-all tracking-wide">{created.tempPassword}</strong></p>
             </div>
-
             {!created.emailSent && created.emailError && (
-              <p className="mt-3 rounded-xl bg-amber-50 p-2 text-xs text-amber-800">
-                Détail : {created.emailError}
-              </p>
+              <p className="mt-3 rounded-xl bg-amber-50 p-2 text-xs text-amber-800">Détail : {created.emailError}</p>
             )}
-
-            <p className="mt-3 text-xs text-ink-faint">
-              Le gérant se connecte via « Connexion administrateur / centre » avec ces identifiants.
-            </p>
-
-            <button onClick={close} className="btn-primary mt-5 w-full">
-              Terminé
-            </button>
+            <Button className="mt-5 w-full" onClick={() => onOpenChange(false)}>Terminé</Button>
           </div>
         ) : (
           <>
-            <h2 className="mb-4 text-lg font-bold">Nouveau centre</h2>
+            <DialogHeader>
+              <DialogTitle>Nouveau centre</DialogTitle>
+            </DialogHeader>
             <form action={submit} className="flex flex-col gap-3">
-              <input name="name" className="field" placeholder="Nom du centre" required />
-              <input name="city" className="field" placeholder="Ville" />
-              <input name="adminEmail" type="email" className="field" placeholder="Email du gérant" required />
-              <input name="contactPhone" className="field" placeholder="Téléphone (optionnel)" />
+              <div className="grid gap-1.5">
+                <Label htmlFor="cc-name">Nom du centre</Label>
+                <Input id="cc-name" name="name" placeholder="Institut Beauté…" required />
+              </div>
+              <div className="grid gap-1.5">
+                <Label htmlFor="cc-city">Ville</Label>
+                <Input id="cc-city" name="city" placeholder="Ville" />
+              </div>
+              <div className="grid gap-1.5">
+                <Label htmlFor="cc-email">Email du gérant</Label>
+                <Input id="cc-email" name="adminEmail" type="email" placeholder="gerant@centre.com" required />
+              </div>
+              <div className="grid gap-1.5">
+                <Label htmlFor="cc-phone">Téléphone</Label>
+                <Input id="cc-phone" name="contactPhone" placeholder="Optionnel" />
+              </div>
               <div className="grid grid-cols-2 gap-3">
-                <select name="plan" className="field" defaultValue="trial">
+                <Select name="plan" defaultValue="trial">
                   <option value="trial">Essai (10 scans)</option>
                   <option value="starter">Starter (50)</option>
                   <option value="pro">Pro (200)</option>
                   <option value="unlimited">Illimité</option>
-                </select>
-                <select name="durationMonths" className="field" defaultValue="1">
+                </Select>
+                <Select name="durationMonths" defaultValue="1">
                   <option value="1">1 mois</option>
                   <option value="3">3 mois</option>
                   <option value="6">6 mois</option>
                   <option value="12">12 mois</option>
-                </select>
+                </Select>
               </div>
-
               {error && <p className="text-sm text-brand-600">{error}</p>}
-
               <div className="mt-2 flex gap-2">
-                <button type="button" onClick={close} className="btn-ghost flex-1">
+                <Button type="button" variant="outline" className="flex-1" onClick={() => onOpenChange(false)}>
                   Annuler
-                </button>
-                <button className="btn-primary flex-1" disabled={pending}>
+                </Button>
+                <Button className="flex-1" disabled={pending}>
                   {pending ? "Création…" : "Créer"}
-                </button>
+                </Button>
               </div>
             </form>
           </>
         )}
-      </div>
-    </div>
+      </DialogContent>
+    </Dialog>
   );
 }
