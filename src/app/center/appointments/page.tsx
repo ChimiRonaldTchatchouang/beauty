@@ -5,6 +5,7 @@ import { db } from "@/lib/db";
 import { appointments, users } from "@/lib/db/schema";
 import { and, asc, eq, gte, lt } from "drizzle-orm";
 import { AppointmentStatusButtons } from "@/components/center/AppointmentStatusButtons";
+import { Card } from "@/components/ui/card";
 
 export default async function AppointmentsPage() {
   const session = await getSession();
@@ -63,7 +64,7 @@ function List({
     return <p className="rounded-2xl bg-white p-4 text-sm text-ink-soft shadow-soft">{empty}</p>;
   }
   return (
-    <div className={`overflow-hidden rounded-3xl bg-white shadow-soft ${muted ? "opacity-90" : ""}`}>
+    <Card className={`overflow-hidden p-0 ${muted ? "opacity-90" : ""}`}>
       {rows.map((a) => (
         <div key={a.id} className="flex items-center justify-between gap-2 border-b border-sand-100 px-4 py-3 last:border-0">
           <Link href={`/center/patients/${a.patientId}`} className="min-w-0">
@@ -76,6 +77,6 @@ function List({
           <AppointmentStatusButtons id={a.id} status={a.status} />
         </div>
       ))}
-    </div>
+    </Card>
   );
 }

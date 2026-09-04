@@ -4,6 +4,8 @@ import { useState } from "react";
 import { I18nProvider } from "@/lib/i18n/context";
 import { ResultsView } from "@/components/views/ResultsView";
 import { RoutineView } from "@/components/views/RoutineView";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import { Button } from "@/components/ui/button";
 import { sendResults, sendWhatsappReport } from "@/lib/actions/center";
 import type { ScanAnalysis, Routine } from "@/lib/db/schema";
 
@@ -77,24 +79,24 @@ export function CenterScanDetail({
       <div className="mb-4 mt-2 flex flex-wrap items-center justify-between gap-3">
         <h1 className="text-2xl font-bold">{patientLabel}</h1>
         <div className="flex flex-wrap gap-2">
-          <a href={reportUrl ?? `/center/scans/${scanId}/report`} target="_blank" rel="noopener noreferrer" className="btn-ghost">
-            📄 PDF
-          </a>
+          <Button asChild variant="outline" size="sm">
+            <a href={reportUrl ?? `/center/scans/${scanId}/report`} target="_blank" rel="noopener noreferrer">📄 PDF</a>
+          </Button>
           {digits &&
             (whatsappAuto ? (
-              <button onClick={doWhatsapp} disabled={waSending || waSent} className="btn-ghost text-green-700">
+              <Button onClick={doWhatsapp} disabled={waSending || waSent} variant="outline" size="sm" className="text-green-700">
                 {waSent ? "✓ PDF envoyé" : waSending ? "Envoi…" : "💬 Envoyer le PDF"}
-              </button>
+              </Button>
             ) : (
               waLinkHref && (
-                <a href={waLinkHref} target="_blank" rel="noopener noreferrer" className="btn-ghost text-green-700">
-                  💬 WhatsApp
-                </a>
+                <Button asChild variant="outline" size="sm" className="text-green-700">
+                  <a href={waLinkHref} target="_blank" rel="noopener noreferrer">💬 WhatsApp</a>
+                </Button>
               )
             ))}
-          <button onClick={doSend} disabled={sending} className="btn-primary">
+          <Button onClick={doSend} disabled={sending} size="sm">
             {sent ? "✓ Renvoyer l'email" : sending ? "Envoi…" : "📧 Email"}
-          </button>
+          </Button>
         </div>
       </div>
       {error && <p className="mb-3 rounded-2xl bg-brand-50 p-3 text-sm text-brand-700">{error}</p>}
@@ -102,23 +104,18 @@ export function CenterScanDetail({
         <p className="mb-3 rounded-2xl bg-green-50 p-3 text-sm text-green-700">Résultats envoyés au patient.</p>
       )}
 
-      <div className="mb-5 inline-flex rounded-2xl bg-sand-100 p-1">
-        {(["results", "routine"] as const).map((k) => (
-          <button
-            key={k}
-            onClick={() => setTab(k)}
-            className={`rounded-xl px-5 py-2 text-sm font-semibold transition ${tab === k ? "bg-white shadow-soft" : "text-ink-faint"}`}
-          >
-            {k === "results" ? "Résultats" : "Routine"}
-          </button>
-        ))}
-      </div>
-
-      {tab === "results" ? (
-        <ResultsView analysis={analysis} image={image} images={images} showRoutineCta={false} date={date} />
-      ) : (
-        <RoutineView routine={routine} />
-      )}
+      <Tabs value={tab} onValueChange={(v) => setTab(v as "results" | "routine")}>
+        <TabsList>
+          <TabsTrigger value="results">Résultats</TabsTrigger>
+          <TabsTrigger value="routine">Routine</TabsTrigger>
+        </TabsList>
+        <TabsContent value="results">
+          <ResultsView analysis={analysis} image={image} images={images} showRoutineCta={false} date={date} />
+        </TabsContent>
+        <TabsContent value="routine">
+          <RoutineView routine={routine} />
+        </TabsContent>
+      </Tabs>
     </I18nProvider>
   );
 }

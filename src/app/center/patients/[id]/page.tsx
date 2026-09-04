@@ -9,6 +9,8 @@ import { PatientProfileForm } from "@/components/center/PatientProfileForm";
 import { PatientInfoForm } from "@/components/center/PatientInfoForm";
 import { AppointmentForm } from "@/components/center/AppointmentForm";
 import { AppointmentStatusButtons } from "@/components/center/AppointmentStatusButtons";
+import { Card } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 
 export default async function PatientDetailPage({
   params,
@@ -55,16 +57,16 @@ export default async function PatientDetailPage({
             </p>
           </div>
         </div>
-        <Link href={`/center/scan?patient=${patient.id}`} className="btn-primary">
-          + Scanner
-        </Link>
+        <Button asChild>
+          <Link href={`/center/scan?patient=${patient.id}`}>+ Scanner</Link>
+        </Button>
       </div>
 
       <div className="mt-6 grid gap-6 lg:grid-cols-2">
         {/* Historique des scans */}
         <div>
           <h2 className="mb-3 text-lg font-bold">Scans</h2>
-          <div className="overflow-hidden rounded-3xl bg-white shadow-soft">
+          <Card className="overflow-hidden p-0">
             {patientScans.length === 0 ? (
               <p className="p-4 text-sm text-ink-soft">Aucun scan pour ce patient.</p>
             ) : (
@@ -90,12 +92,12 @@ export default async function PatientDetailPage({
                 </Link>
               ))
             )}
-          </div>
+          </Card>
 
           {/* Rendez-vous */}
           <h2 className="mb-3 mt-8 text-lg font-bold">Rendez-vous</h2>
           <AppointmentForm patientId={patient.id} />
-          <div className="mt-3 overflow-hidden rounded-3xl bg-white shadow-soft">
+          <Card className="mt-3 overflow-hidden p-0">
             {patientAppointments.length === 0 ? (
               <p className="p-4 text-sm text-ink-soft">Aucun rendez-vous.</p>
             ) : (
@@ -109,7 +111,7 @@ export default async function PatientDetailPage({
                 </div>
               ))
             )}
-          </div>
+          </Card>
         </div>
 
         {/* Infos patient + Profil peau éditables */}

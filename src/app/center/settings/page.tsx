@@ -4,6 +4,7 @@ import { db } from "@/lib/db";
 import { centers, users } from "@/lib/db/schema";
 import { and, eq, sql } from "drizzle-orm";
 import { getLicenseState } from "@/lib/license";
+import { Card } from "@/components/ui/card";
 
 export default async function CenterSettingsPage() {
   const session = await getSession();
@@ -76,7 +77,7 @@ function Section({ title, children }: { title: string; children: React.ReactNode
   return (
     <div className="mb-5">
       <h2 className="mb-2 px-1 text-sm font-semibold text-ink-faint">{title}</h2>
-      <div className="overflow-hidden rounded-3xl bg-white shadow-soft">{children}</div>
+      <Card className="overflow-hidden p-0">{children}</Card>
     </div>
   );
 }
