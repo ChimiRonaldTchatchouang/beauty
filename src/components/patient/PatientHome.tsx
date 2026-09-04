@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useI18n } from "@/lib/i18n/context";
 import { ResultsView } from "@/components/views/ResultsView";
 import { RoutineView } from "@/components/views/RoutineView";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import type { ScanAnalysis, Routine } from "@/lib/db/schema";
 
 interface LastScan {
@@ -77,25 +78,18 @@ export function PatientHome({
           </p>
         </div>
       ) : (
-        <>
-          <div className="mb-5 inline-flex rounded-2xl bg-sand-100 p-1">
-            {(["results", "routine"] as const).map((k) => (
-              <button
-                key={k}
-                onClick={() => setTab(k)}
-                className={`rounded-xl px-5 py-2 text-sm font-semibold transition ${tab === k ? "bg-white shadow-soft" : "text-ink-faint"}`}
-              >
-                {k === "results" ? t.results.title : t.routine.title}
-              </button>
-            ))}
-          </div>
-
-          {tab === "results" ? (
+        <Tabs value={tab} onValueChange={(v) => setTab(v as "results" | "routine")}>
+          <TabsList>
+            <TabsTrigger value="results">{t.results.title}</TabsTrigger>
+            <TabsTrigger value="routine">{t.routine.title}</TabsTrigger>
+          </TabsList>
+          <TabsContent value="results">
             <ResultsView analysis={lastScan.analysis} image={lastScan.image} images={lastScan.images} showRoutineCta={false} date={lastScan.createdAt} />
-          ) : (
+          </TabsContent>
+          <TabsContent value="routine">
             <RoutineView routine={lastScan.routine} />
-          )}
-        </>
+          </TabsContent>
+        </Tabs>
       )}
     </div>
   );
