@@ -3,6 +3,8 @@ import { db } from "@/lib/db";
 import { centers, licenses, users } from "@/lib/db/schema";
 import { desc, eq, sql } from "drizzle-orm";
 import { CreateCenterForm } from "@/components/admin/CreateCenterForm";
+import { Card } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
 
 export default async function CentersPage() {
   const rows = await db
@@ -32,13 +34,13 @@ export default async function CentersPage() {
       </div>
 
       {uniqueCenters.length === 0 ? (
-        <div className="card text-center">
+        <Card className="text-center">
           <div className="mb-2 text-4xl">🏥</div>
           <p className="font-semibold">Aucun centre pour le moment</p>
           <p className="mt-1 text-sm text-ink-soft">Créez votre premier centre client ci-dessus.</p>
-        </div>
+        </Card>
       ) : (
-        <div className="overflow-hidden rounded-3xl bg-white shadow-soft">
+        <Card className="overflow-hidden p-0">
           {uniqueCenters.map((c) => (
             <Link
               key={c.id}
@@ -51,23 +53,17 @@ export default async function CentersPage() {
                   {c.city ?? "—"} · {c.staffCount} compte(s)
                 </p>
               </div>
-              <div className="text-right">
-                <span
-                  className={`inline-block rounded-full px-2 py-0.5 text-xs font-semibold ${
-                    c.status === "active" && c.active
-                      ? "bg-green-100 text-green-700"
-                      : "bg-sand-100 text-ink-faint"
-                  }`}
-                >
+              <div className="flex flex-col items-end gap-1">
+                <Badge variant={c.status === "active" && c.active ? "success" : "neutral"}>
                   {c.plan ?? "sans licence"}
-                </span>
-                <p className="mt-1 text-xs text-ink-faint">
+                </Badge>
+                <span className="text-xs text-ink-faint">
                   {c.expiresAt ? `exp. ${new Date(c.expiresAt).toLocaleDateString("fr-FR")}` : ""}
-                </p>
+                </span>
               </div>
             </Link>
           ))}
-        </div>
+        </Card>
       )}
     </div>
   );

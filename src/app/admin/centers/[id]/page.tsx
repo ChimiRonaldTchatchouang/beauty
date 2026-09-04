@@ -7,6 +7,8 @@ import { getLicenseState } from "@/lib/license";
 import { LicenseControls } from "@/components/admin/LicenseControls";
 import { ResetPasswordButton } from "@/components/admin/ResetPasswordButton";
 import { DeleteCenterButton } from "@/components/admin/DeleteCenterButton";
+import { Card } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
 
 export default async function CenterDetailPage({
   params,
@@ -74,7 +76,7 @@ export default async function CenterDetailPage({
 
         <div>
           <h2 className="mb-3 text-lg font-bold">Comptes du centre</h2>
-          <div className="overflow-hidden rounded-3xl bg-white shadow-soft">
+          <Card className="overflow-hidden p-0">
             {staff.length === 0 ? (
               <p className="p-4 text-sm text-ink-soft">Aucun compte staff.</p>
             ) : (
@@ -85,18 +87,16 @@ export default async function CenterDetailPage({
                     <p className="truncate text-xs text-ink-faint">{u.email}</p>
                   </div>
                   <div className="flex shrink-0 items-center gap-2">
-                    <div className="text-right text-xs">
-                      <span className="rounded-full bg-brand-50 px-2 py-0.5 font-semibold text-brand-700">
-                        {u.role === "center_admin" ? "Gérant" : "Staff"}
-                      </span>
-                      <p className="mt-1 text-ink-faint">{u.activated ? "actif" : "invité"}</p>
+                    <div className="flex flex-col items-end gap-1 text-xs">
+                      <Badge>{u.role === "center_admin" ? "Gérant" : "Staff"}</Badge>
+                      <span className="text-ink-faint">{u.activated ? "actif" : "invité"}</span>
                     </div>
                     <ResetPasswordButton userId={u.id} label={u.email} />
                   </div>
                 </div>
               ))
             )}
-          </div>
+          </Card>
         </div>
       </div>
     </div>
@@ -105,9 +105,9 @@ export default async function CenterDetailPage({
 
 function Stat({ label, value, tone }: { label: string; value: string | number; tone?: "ok" | "warn" }) {
   return (
-    <div className="card">
+    <Card>
       <p className={`text-2xl font-bold ${tone === "warn" ? "text-amber-600" : "text-brand-600"}`}>{value}</p>
       <p className="text-sm text-ink-faint">{label}</p>
-    </div>
+    </Card>
   );
 }

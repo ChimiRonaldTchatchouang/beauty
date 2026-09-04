@@ -2,6 +2,8 @@ import Link from "next/link";
 import { db } from "@/lib/db";
 import { centers, users, scans, licenses } from "@/lib/db/schema";
 import { and, desc, eq, gte, sql } from "drizzle-orm";
+import { Card } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
 
 function startOfMonthUTC(): Date {
   const d = new Date();
@@ -49,7 +51,7 @@ export default async function AdminDashboard() {
       </div>
 
       <h2 className="mb-3 mt-8 text-lg font-bold">⏳ Licences à renouveler</h2>
-      <div className="overflow-hidden rounded-3xl bg-white shadow-soft">
+      <Card className="overflow-hidden p-0">
         {expiring.length === 0 ? (
           <p className="p-6 text-sm text-ink-soft">Aucune licence n'expire dans les 14 jours.</p>
         ) : (
@@ -60,24 +62,23 @@ export default async function AdminDashboard() {
               className="flex items-center justify-between border-b border-sand-100 px-4 py-3 last:border-0 hover:bg-sand-50"
             >
               <span className="font-medium">{l.centerName}</span>
-              <span className="text-sm text-ink-faint">
-                {l.plan} · expire le{" "}
-                {l.expiresAt ? new Date(l.expiresAt).toLocaleDateString("fr-FR") : "—"}
-              </span>
+              <Badge variant="warning">
+                {l.plan} · exp. {l.expiresAt ? new Date(l.expiresAt).toLocaleDateString("fr-FR") : "—"}
+              </Badge>
             </Link>
           ))
         )}
-      </div>
+      </Card>
     </div>
   );
 }
 
 function Stat({ label, value, href }: { label: string; value: number; href?: string }) {
   const inner = (
-    <div className="card">
+    <Card className="transition hover:shadow-soft">
       <p className="text-3xl font-bold text-brand-600">{value}</p>
       <p className="text-sm text-ink-faint">{label}</p>
-    </div>
+    </Card>
   );
   return href ? <Link href={href}>{inner}</Link> : inner;
 }
