@@ -3,9 +3,10 @@ import websocket from '@fastify/websocket';
 import type { WebSocket } from 'ws';
 import { CallStartSchema } from '@nextiaa/shared';
 import { config, getRuntimeSettings } from './config.js';
-import { logger } from './logger.js';
+import { logger, loggerOptions } from './logger.js';
 import { BrowserTransport } from './telephony/BrowserTransport.js';
 import { CallSession } from './call/CallSession.js';
+import { registerConfigRoutes } from './api/config.routes.js';
 
 /**
  * Point d'entrée du serveur Nextiaa Voice.
@@ -15,8 +16,9 @@ import { CallSession } from './call/CallSession.js';
  * Gemini Live.
  */
 async function main(): Promise<void> {
-  const app = Fastify({ loggerInstance: logger });
+  const app = Fastify({ logger: loggerOptions });
   await app.register(websocket);
+  await registerConfigRoutes(app);
 
   app.get('/health', async () => ({
     ok: true,

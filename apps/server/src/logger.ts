@@ -1,20 +1,23 @@
-import pino from 'pino';
+import pino, { type LoggerOptions } from 'pino';
 import { config } from './config.js';
 
 /**
- * Journalisation structurée (pino).
- * Ne JAMAIS journaliser la clé API. On préfixe les logs d'appel par callId.
+ * Options de journalisation partagées (pino).
+ * Ne JAMAIS journaliser la clé API : elle est expressément expurgée.
  */
-export const logger = pino({
+export const loggerOptions: LoggerOptions = {
   level: config.NODE_ENV === 'production' ? 'info' : 'debug',
   redact: {
     paths: ['GEMINI_API_KEY', 'apiKey', 'req.headers.authorization'],
-    censor: '[redacted]',
+    censor: '[expurgé]',
   },
   transport:
     config.NODE_ENV === 'production'
       ? undefined
       : { target: 'pino-pretty', options: { colorize: true, translateTime: 'HH:MM:ss' } },
-});
+};
+
+/** Instance autonome (utilisée par la couche appel : CallSession, GeminiLiveClient). */
+export const logger = pino(loggerOptions);
 
 export type Logger = typeof logger;

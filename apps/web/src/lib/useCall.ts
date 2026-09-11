@@ -120,7 +120,7 @@ export function useCall() {
       try {
         await engine.start((pcm16k) => {
           if (connectedRef.current) clientRef.current?.sendAudio(pcm16k);
-        });
+        }, params.phoneQualityMode);
       } catch (err) {
         const denied = err instanceof DOMException && (err.name === 'NotAllowedError' || err.name === 'SecurityError');
         setState((p) => ({

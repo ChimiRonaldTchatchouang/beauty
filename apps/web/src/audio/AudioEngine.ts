@@ -1,4 +1,5 @@
 import { toPcm16k, pcm16BufferToFloat } from './resample.js';
+import { toPhoneQualityPcm16k } from './phoneFilter.js';
 // Les worklets sont chargés par URL. En dev, Vite transpile le .ts à la volée ;
 // en build, un petit plugin (voir vite.config.ts) les émet en modules JS séparés.
 import captureWorkletUrl from './capture.worklet.ts?worklet-url';
@@ -22,12 +23,15 @@ export class AudioEngine {
   private playbackNode: AudioWorkletNode | null = null;
   private micSource: MediaStreamAudioSourceNode | null = null;
   private muted = false;
+  private phoneQualityMode = false;
 
   /**
    * Démarre la capture et la lecture.
+   * @param phoneQualityMode applique le filtre « qualité téléphone » à la capture.
    * @throws si l'autorisation micro est refusée (à présenter clairement à l'utilisateur).
    */
-  async start(onPcm16k: (pcm16k: ArrayBuffer) => void): Promise<void> {
+  async start(onPcm16k: (pcm16k: ArrayBuffer) => void, phoneQualityMode = false): Promise<void> {
+    this.phoneQualityMode = phoneQualityMode;
     // 1) Micro (peut lever NotAllowedError si l'utilisateur refuse).
     this.micStream = await navigator.mediaDevices.getUserMedia({
       audio: { channelCount: 1, echoCancellation: true, noiseSuppression: true, autoGainControl: true },
@@ -41,7 +45,9 @@ export class AudioEngine {
     this.captureNode.port.onmessage = (e: MessageEvent) => {
       if (this.muted) return;
       const { samples, sampleRate } = e.data as { samples: Float32Array; sampleRate: number };
-      const pcm = toPcm16k(samples, sampleRate);
+      const pcm = this.phoneQualityMode
+        ? toPhoneQualityPcm16k(samples, sampleRate)
+        : toPcm16k(samples, sampleRate);
       // Copie exacte des octets PCM16 dans un ArrayBuffer neuf (envoi binaire).
       const bytes = new Uint8Array(pcm.byteLength);
       bytes.set(new Uint8Array(pcm.buffer, pcm.byteOffset, pcm.byteLength));
