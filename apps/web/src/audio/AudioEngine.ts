@@ -1,5 +1,6 @@
 import { toPcm16k, pcm16BufferToFloat } from './resample.js';
 import { toPhoneQualityPcm16k } from './phoneFilter.js';
+import { LocalVad } from './localVad.js';
 // Les worklets sont chargés par URL. En dev, Vite transpile le .ts à la volée ;
 // en build, un petit plugin (voir vite.config.ts) les émet en modules JS séparés.
 import captureWorkletUrl from './capture.worklet.ts?worklet-url';
@@ -24,14 +25,28 @@ export class AudioEngine {
   private micSource: MediaStreamAudioSourceNode | null = null;
   private muted = false;
   private phoneQualityMode = false;
+  // Mesure de latence : instant de fin de parole → premier audio joué.
+  private vad: LocalVad | null = null;
+  private speechEndAt: number | null = null;
+  private onLatency: ((ms: number) => void) | null = null;
 
   /**
    * Démarre la capture et la lecture.
    * @param phoneQualityMode applique le filtre « qualité téléphone » à la capture.
+   * @param onLatency callback de mesure de latence (fin de parole → 1er audio joué).
    * @throws si l'autorisation micro est refusée (à présenter clairement à l'utilisateur).
    */
-  async start(onPcm16k: (pcm16k: ArrayBuffer) => void, phoneQualityMode = false): Promise<void> {
+  async start(
+    onPcm16k: (pcm16k: ArrayBuffer) => void,
+    phoneQualityMode = false,
+    onLatency?: (ms: number) => void,
+  ): Promise<void> {
     this.phoneQualityMode = phoneQualityMode;
+    this.onLatency = onLatency ?? null;
+    // À chaque fin de parole détectée localement, on arme le chronomètre.
+    this.vad = new LocalVad(() => {
+      this.speechEndAt = performance.now();
+    });
     // 1) Micro (peut lever NotAllowedError si l'utilisateur refuse).
     this.micStream = await navigator.mediaDevices.getUserMedia({
       audio: { channelCount: 1, echoCancellation: true, noiseSuppression: true, autoGainControl: true },
@@ -45,6 +60,7 @@ export class AudioEngine {
     this.captureNode.port.onmessage = (e: MessageEvent) => {
       if (this.muted) return;
       const { samples, sampleRate } = e.data as { samples: Float32Array; sampleRate: number };
+      this.vad?.push(samples); // mesure de latence
       const pcm = this.phoneQualityMode
         ? toPhoneQualityPcm16k(samples, sampleRate)
         : toPcm16k(samples, sampleRate);
@@ -66,6 +82,11 @@ export class AudioEngine {
   /** Joue un morceau d'audio de l'assistant (PCM16 24 kHz). */
   playPcm24k(buffer: ArrayBuffer): void {
     if (!this.playbackNode) return;
+    // Premier échantillon joué après une fin de parole → latence du tour.
+    if (this.speechEndAt !== null) {
+      this.onLatency?.(Math.round(performance.now() - this.speechEndAt));
+      this.speechEndAt = null;
+    }
     const float = pcm16BufferToFloat(buffer);
     this.playbackNode.port.postMessage({ samples: float }, [float.buffer]);
   }

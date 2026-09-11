@@ -199,6 +199,10 @@ export class Repository {
     return this.db.prepare('SELECT * FROM sms ORDER BY at DESC LIMIT ?').all(limit) as SmsRow[];
   }
 
+  listSmsByCall(callId: string): SmsRow[] {
+    return this.db.prepare('SELECT * FROM sms WHERE call_id = ? ORDER BY at').all(callId) as SmsRow[];
+  }
+
   // ── Tickets ────────────────────────────────────────────────
   /** Génère une référence NXV-<année>-NNNN séquentielle. */
   nextTicketReference(): string {

@@ -34,6 +34,7 @@ export interface CallState {
   muted: boolean;
   lastEndReason: string | null;
   sms: SmsMessage[];
+  lastLatencyMs: number | null;
 }
 
 /**
@@ -48,6 +49,7 @@ export function useCall() {
     muted: false,
     lastEndReason: null,
     sms: [],
+    lastLatencyMs: null,
   });
   const smsIdRef = useRef(0);
 
@@ -103,6 +105,9 @@ export function useCall() {
         case 'transcript.agent':
           appendTranscript('agent', event.text, event.final);
           break;
+        case 'metrics.turn':
+          setState((p) => ({ ...p, lastLatencyMs: event.latencyMs }));
+          break;
         case 'sms.received':
           setState((p) => ({
             ...p,
@@ -127,7 +132,7 @@ export function useCall() {
   const start = useCallback(
     async (params: StartParams) => {
       // On conserve la boîte SMS entre les appels (comme un vrai téléphone).
-      setState((p) => ({ status: 'connecting', transcripts: [], error: null, muted: false, lastEndReason: null, sms: p.sms }));
+      setState((p) => ({ status: 'connecting', transcripts: [], error: null, muted: false, lastEndReason: null, sms: p.sms, lastLatencyMs: null }));
       openLineRef.current = { user: null, agent: null };
 
       const engine = new AudioEngine();
@@ -135,9 +140,17 @@ export function useCall() {
 
       // La permission micro est demandée ici (geste utilisateur).
       try {
-        await engine.start((pcm16k) => {
-          if (connectedRef.current) clientRef.current?.sendAudio(pcm16k);
-        }, params.phoneQualityMode);
+        await engine.start(
+          (pcm16k) => {
+            if (connectedRef.current) clientRef.current?.sendAudio(pcm16k);
+          },
+          params.phoneQualityMode,
+          (latencyMs) => {
+            // On rapporte la latence mesurée localement au serveur (persistée par tour).
+            if (connectedRef.current) clientRef.current?.send({ type: 'metrics.turn.report', latencyMs });
+            setState((p) => ({ ...p, lastLatencyMs: latencyMs }));
+          },
+        );
       } catch (err) {
         const denied = err instanceof DOMException && (err.name === 'NotAllowedError' || err.name === 'SecurityError');
         setState((p) => ({

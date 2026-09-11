@@ -155,7 +155,13 @@ export default function Phone() {
             {showSms ? (
               <SmsApp messages={state.sms} onClose={() => setShowSms(false)} />
             ) : phase === 'incall' ? (
-              <InCall status={state.status} muted={state.muted} onToggleMute={toggleMute} onHangup={onHangup} />
+              <InCall
+                status={state.status}
+                muted={state.muted}
+                latencyMs={state.lastLatencyMs}
+                onToggleMute={toggleMute}
+                onHangup={onHangup}
+              />
             ) : phase === 'ended' ? (
               <EndedScreen reason={state.error ?? state.lastEndReason} onBack={() => setPhase('home')} />
             ) : (

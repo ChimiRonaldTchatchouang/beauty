@@ -7,6 +7,7 @@ import { logger, loggerOptions } from './logger.js';
 import { BrowserTransport } from './telephony/BrowserTransport.js';
 import { CallSession } from './call/CallSession.js';
 import { registerConfigRoutes } from './api/config.routes.js';
+import { registerConsoleRoutes } from './api/console.routes.js';
 import { Repository } from './db/repository.js';
 import { seed } from './db/seed.js';
 import { ToolRouter } from './tools/index.js';
@@ -28,6 +29,7 @@ async function main(): Promise<void> {
   const toolRouter = new ToolRouter(repo);
 
   await registerConfigRoutes(app);
+  await registerConsoleRoutes(app, repo);
 
   app.get('/health', async () => ({
     ok: true,
