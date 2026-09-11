@@ -7,6 +7,8 @@ import { PhoneFrame } from './PhoneFrame.js';
 import { Dialer } from './Dialer.js';
 import { InCall } from './InCall.js';
 import { SmsApp } from './SmsApp.js';
+import { UssdDialog } from './UssdDialog.js';
+import { IncomingCall } from './IncomingCall.js';
 import { TranscriptPanel } from './TranscriptPanel.js';
 import { FICTIONAL_NUMBERS, OPERATORS } from './profile.js';
 
@@ -19,7 +21,12 @@ function Wordmark() {
   );
 }
 
-type Phase = 'home' | 'incall' | 'ended';
+type Phase = 'home' | 'incall' | 'ended' | 'incoming';
+
+const USSD_MENU = "Nextiaa Voice — 1. Parler à l'assistant, 2. Recevoir le menu par SMS";
+const USSD_SMS_BODY =
+  "Nextiaa Voice (démo) — Menu : composez le 8000 pour parler à notre assistant automatique. " +
+  "Informations et données de démonstration fictives.";
 
 /**
  * Téléphone simulé (route /). Profil de test en haut, cadre smartphone
@@ -27,8 +34,9 @@ type Phase = 'home' | 'incall' | 'ended';
  */
 export default function Phone() {
   const cfg = useServerConfig();
-  const { state, start, hangup, toggleMute } = useCall();
+  const { state, start, hangup, toggleMute, pushLocalSms } = useCall();
   const [phase, setPhase] = useState<Phase>('home');
+  const [showUssd, setShowUssd] = useState(false);
   const [operator, setOperator] = useState<SimOperator>('orange');
   const [callerNumber, setCallerNumber] = useState(FICTIONAL_NUMBERS[0]!.value);
   const [phoneQuality, setPhoneQuality] = useState(false);
@@ -48,7 +56,8 @@ export default function Phone() {
   // Sonnerie (ringback) pendant l'établissement de l'appel.
   useEffect(() => {
     const t = getTones();
-    if (phase === 'incall' && (state.status === 'connecting' || state.status === 'ringing')) {
+    const establishing = phase === 'incall' && (state.status === 'connecting' || state.status === 'ringing');
+    if (establishing || phase === 'incoming') {
       t.startRinging();
     } else {
       t.stopRinging();
@@ -65,9 +74,9 @@ export default function Phone() {
   const call = useCallback(
     (dialed: string) => {
       setNotice(null);
-      // USSD : implémenté au jalon J6.
+      // Parcours USSD : ouvre le menu de type USSD.
       if (dialed === cfg.ussdCode) {
-        setNotice(`Le parcours USSD (${cfg.ussdCode}) sera disponible au jalon 6.`);
+        setShowUssd(true);
         return;
       }
       if (!cfg.demoNumbers.includes(dialed)) {
@@ -84,6 +93,38 @@ export default function Phone() {
     void hangup();
     setPhase('ended');
   }, [hangup]);
+
+  // Choix dans le menu USSD.
+  const onUssdSelect = useCallback(
+    (option: number) => {
+      setShowUssd(false);
+      if (option === 1) {
+        // « Parler à l'assistant » → rappel entrant après 3 s (sans crédit).
+        setNotice('Vous allez être rappelé…');
+        setTimeout(() => {
+          setNotice(null);
+          setPhase('incoming');
+        }, 3000);
+      } else if (option === 2) {
+        // « Recevoir le menu par SMS » → SMS local simulé.
+        pushLocalSms('Nextiaa Voice', USSD_SMS_BODY);
+        setNotice('Le menu vous a été envoyé par SMS.');
+      }
+    },
+    [pushLocalSms],
+  );
+
+  // Décrocher le rappel USSD → appel en mode « rappel USSD ».
+  const acceptIncoming = useCallback(() => {
+    setPhase('incall');
+    void start({
+      dialed: cfg.demoNumbers[0] ?? '8000',
+      callerNumber,
+      simOperator: operator,
+      phoneQualityMode: phoneQuality,
+      accessMode: 'ussd_callback',
+    });
+  }, [cfg.demoNumbers, callerNumber, operator, phoneQuality, start]);
 
   // Retour à l'accueil après la fin de l'appel.
   useEffect(() => {
@@ -152,8 +193,22 @@ export default function Phone() {
               </button>
             )}
 
+            {showUssd && (
+              <UssdDialog
+                title={USSD_MENU}
+                options={[
+                  { index: 1, label: "Parler à l'assistant" },
+                  { index: 2, label: 'Recevoir le menu par SMS' },
+                ]}
+                onSelect={onUssdSelect}
+                onCancel={() => setShowUssd(false)}
+              />
+            )}
+
             {showSms ? (
               <SmsApp messages={state.sms} onClose={() => setShowSms(false)} />
+            ) : phase === 'incoming' ? (
+              <IncomingCall onAccept={acceptIncoming} onReject={() => setPhase('home')} />
             ) : phase === 'incall' ? (
               <InCall
                 status={state.status}

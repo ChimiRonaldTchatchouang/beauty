@@ -48,3 +48,9 @@ export function buildSystemPrompt(vars: PromptVariables): string {
 export const GREETING_INSTRUCTION =
   "L'appel vient d'être décroché. Accueille l'appelant maintenant, en précisant " +
   "que tu es un assistant automatique, avec la phrase d'accueil prévue.";
+
+/** Consigne après une reprise de session (coupure réseau puis reconnexion). */
+export const RESUME_GREETING_INSTRUCTION =
+  "La connexion a été coupée un instant puis rétablie. Dis exactement : " +
+  "« Nous avons été coupés, reprenons où nous en étions. » puis poursuis la conversation " +
+  "là où elle s'était arrêtée.";

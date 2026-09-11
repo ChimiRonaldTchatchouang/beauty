@@ -3,7 +3,7 @@ import type { ServerEvent, SimOperator } from '@nextiaa/shared';
 import { AudioEngine } from '../audio/AudioEngine.js';
 import { CallClient } from './ws.js';
 
-export type CallStatus = 'idle' | 'ringing' | 'connecting' | 'connected' | 'ended' | 'error';
+export type CallStatus = 'idle' | 'ringing' | 'connecting' | 'connected' | 'reconnecting' | 'ended' | 'error';
 
 export interface TranscriptLine {
   id: number;
@@ -57,15 +57,28 @@ export function useCall() {
   const clientRef = useRef<CallClient | null>(null);
   const connectedRef = useRef(false);
   const lineIdRef = useRef(0);
+  // Reprise après coupure (J6).
+  const resumeTokenRef = useRef<string | undefined>(undefined);
+  const lastParamsRef = useRef<StartParams | null>(null);
+  const userHangupRef = useRef(false);
+  const reconnectDeadlineRef = useRef(0);
+  const reconnectTimerRef = useRef<number | null>(null);
+  /** Fenêtre de reprise après coupure : 60 secondes. */
+  const RESUME_WINDOW_MS = 60_000;
   // Ligne courante par locuteur, pour agréger les transcriptions partielles.
   const openLineRef = useRef<{ user: number | null; agent: number | null }>({ user: null, agent: null });
 
   const cleanup = useCallback(async () => {
     connectedRef.current = false;
+    if (reconnectTimerRef.current !== null) {
+      clearTimeout(reconnectTimerRef.current);
+      reconnectTimerRef.current = null;
+    }
     clientRef.current?.close();
     clientRef.current = null;
     await engineRef.current?.stop();
     engineRef.current = null;
+    resumeTokenRef.current = undefined;
   }, []);
 
   const appendTranscript = useCallback((who: 'user' | 'agent', text: string, final: boolean) => {
@@ -94,6 +107,8 @@ export function useCall() {
           break;
         case 'call.connected':
           connectedRef.current = true;
+          resumeTokenRef.current = event.resumeToken ?? resumeTokenRef.current;
+          reconnectDeadlineRef.current = 0; // reprise réussie : on réarme la fenêtre
           setState((p) => ({ ...p, status: 'connected' }));
           break;
         case 'audio.flush':
@@ -129,11 +144,59 @@ export function useCall() {
     [appendTranscript, cleanup],
   );
 
+  // Établit (ou rétablit) la connexion WebSocket. `resume` = reprise après coupure.
+  const connectClientRef = useRef<(resume: boolean) => void>(() => undefined);
+  const connectClient = useCallback(
+    (resume: boolean) => {
+      const params = lastParamsRef.current;
+      if (!params) return;
+      const client = new CallClient({
+        onAudio: (buf) => engineRef.current?.playPcm24k(buf),
+        onEvent: handleEvent,
+        onClose: () => {
+          connectedRef.current = false;
+          if (userHangupRef.current) {
+            void cleanup();
+            return;
+          }
+          // Coupure inattendue : tenter la reprise dans la fenêtre de 60 s.
+          const now = Date.now();
+          if (reconnectDeadlineRef.current === 0) reconnectDeadlineRef.current = now + RESUME_WINDOW_MS;
+          if (resumeTokenRef.current && now < reconnectDeadlineRef.current) {
+            setState((p) => ({ ...p, status: 'reconnecting' }));
+            reconnectTimerRef.current = window.setTimeout(() => connectClientRef.current(true), 1500);
+          } else {
+            setState((p) =>
+              ['connected', 'connecting', 'reconnecting'].includes(p.status) ? { ...p, status: 'ended', lastEndReason: 'disconnected' } : p,
+            );
+            void cleanup();
+          }
+        },
+      });
+      clientRef.current = client;
+      client.connect({
+        type: 'call.start',
+        dialed: params.dialed,
+        callerNumber: params.callerNumber,
+        simOperator: params.simOperator,
+        phoneQualityMode: params.phoneQualityMode,
+        accessMode: params.accessMode ?? 'direct',
+        resumeToken: resume ? resumeTokenRef.current : undefined,
+      });
+    },
+    [cleanup, handleEvent],
+  );
+  connectClientRef.current = connectClient;
+
   const start = useCallback(
     async (params: StartParams) => {
       // On conserve la boîte SMS entre les appels (comme un vrai téléphone).
       setState((p) => ({ status: 'connecting', transcripts: [], error: null, muted: false, lastEndReason: null, sms: p.sms, lastLatencyMs: null }));
       openLineRef.current = { user: null, agent: null };
+      userHangupRef.current = false;
+      reconnectDeadlineRef.current = 0;
+      resumeTokenRef.current = undefined;
+      lastParamsRef.current = params;
 
       const engine = new AudioEngine();
       engineRef.current = engine;
@@ -164,31 +227,24 @@ export function useCall() {
         return;
       }
 
-      const client = new CallClient({
-        onAudio: (buf) => engineRef.current?.playPcm24k(buf),
-        onEvent: handleEvent,
-        onClose: () => {
-          setState((p) => (p.status === 'connected' || p.status === 'connecting' ? { ...p, status: 'ended' } : p));
-          void cleanup();
-        },
-      });
-      clientRef.current = client;
-      client.connect({
-        type: 'call.start',
-        dialed: params.dialed,
-        callerNumber: params.callerNumber,
-        simOperator: params.simOperator,
-        phoneQualityMode: params.phoneQualityMode,
-        accessMode: params.accessMode ?? 'direct',
-      });
+      connectClient(false);
     },
-    [cleanup, handleEvent],
+    [cleanup, connectClient],
   );
 
   const hangup = useCallback(async () => {
+    userHangupRef.current = true;
     setState((p) => ({ ...p, status: 'ended' }));
     await cleanup();
   }, [cleanup]);
+
+  /** Injecte un SMS local dans la boîte (ex. « menu par SMS » du parcours USSD). */
+  const pushLocalSms = useCallback((from: string, body: string) => {
+    setState((p) => ({
+      ...p,
+      sms: [{ id: ++smsIdRef.current, from, body, at: new Date().toISOString() }, ...p.sms],
+    }));
+  }, []);
 
   const toggleMute = useCallback(() => {
     setState((p) => {
@@ -199,5 +255,5 @@ export function useCall() {
     });
   }, []);
 
-  return { state, start, hangup, toggleMute };
+  return { state, start, hangup, toggleMute, pushLocalSms };
 }

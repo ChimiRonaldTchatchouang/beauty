@@ -3,7 +3,7 @@ import type { SimOperator, ClientEvent } from '@nextiaa/shared';
 import type { CallTransport } from '../telephony/CallTransport.js';
 import type { BrowserTransport } from '../telephony/BrowserTransport.js';
 import { GeminiLiveClient } from './GeminiLiveClient.js';
-import { buildSystemPrompt, GREETING_INSTRUCTION } from './systemPrompt.js';
+import { buildSystemPrompt, GREETING_INSTRUCTION, RESUME_GREETING_INSTRUCTION } from './systemPrompt.js';
 import type { Logger } from '../logger.js';
 
 /**
@@ -152,8 +152,8 @@ export class CallSession {
 
     this.transport.sendEvent({ type: 'call.connected', callId: this.transport.callId, resumeToken: this.resumeHandle });
 
-    // Message d'accueil : on demande au modèle de parler tout de suite.
-    this.gemini.sendText(GREETING_INSTRUCTION);
+    // Message d'accueil : standard, ou consigne de reprise après coupure (J6).
+    this.gemini.sendText(this.opts.resumeHandle ? RESUME_GREETING_INSTRUCTION : GREETING_INSTRUCTION);
 
     this.scheduleDurationLimits();
     this.log.info({ callId: this.transport.callId }, 'Appel démarré');
