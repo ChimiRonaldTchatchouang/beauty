@@ -1,33 +1,29 @@
-# dependencies
-/node_modules
-/.pnp
-.pnp.js
+# Dépendances
+node_modules/
 
-# next.js
-/.next/
-/out/
-next-env.d.ts
-
-# production
-/build
-
-# misc
-.DS_Store
-*.pem
-
-# debug
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
-
-# local env files
-.env
-.env*.local
-
-# vercel
-.vercel
-
-# typescript
+# Build
+dist/
+build/
 *.tsbuildinfo
 
-# drizzle: on VERSIONNE les migrations (dossier drizzle/), rien à ignorer ici.
+# Environnement (ne JAMAIS committer la clé API)
+.env
+.env.local
+apps/*/.env
+
+# Base de données locale (données fictives régénérables via seed)
+data/*.db
+data/*.db-journal
+data/*.db-wal
+data/*.db-shm
+
+# Journaux
+*.log
+logs/
+
+# Divers OS / éditeurs
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+coverage/

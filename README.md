@@ -1,63 +1,99 @@
-# SkinScan — Plateforme B2B de diagnostic cutané par IA
+# Nextiaa Voice
 
-SaaS multi-tenant vendu **sous licence à des centres de beauté**. Trois espaces :
+Assistant vocal IA **voix-à-voix** (API **Gemini Live**) qu'on « appelle »
+depuis un **téléphone simulé dans le navigateur**. MVP de démonstration édité
+par **Nextiaa** (Douala, Cameroun).
 
-- **Admin** (`/admin`) — l'éditeur gère les centres et leurs licences.
-- **Centre** (`/center`) — chaque centre scanne ses patients (Gemini vision),
-  envoie les résultats **par email** (Resend), suit patients & rendez-vous.
-- **Patient** (`/me`) — connexion **Google**, consulte ses résultats, sa
-  routine et ses rendez-vous après consultation.
+> ⚠️ **Données de démonstration fictives uniquement.**
+> Ce projet utilise le **niveau gratuit** de Google AI Studio. Sur ce niveau,
+> Google **peut utiliser les échanges** pour améliorer ses produits.
+> **Ne saisissez donc aucune donnée réelle** (numéros, noms, dossiers,
+> montants). Tout ce qui est fourni dans la démo est **fictif**.
 
-> ⚕️ Analyse **cosmétique** uniquement — aucun diagnostic médical.
+## Prérequis
 
-## Stack
+- **Node.js 20+** (testé sous Node 22) et **npm 10+**.
+- Une **clé API Google AI Studio** (gratuite).
 
-Next.js 15 (App Router) · TypeScript · Tailwind · **Neon** (Postgres) + Drizzle
-ORM · **Gemini** vision · **Resend** email · OAuth **Google** maison + session
-JWT (`jose`) · Recharts · PWA (service worker + manifest).
+## Obtenir la clé gratuite
 
-## Rôles & isolation
+1. Aller sur <https://aistudio.google.com/apikey>.
+2. Se connecter avec un compte Google et **créer une clé API**.
+3. La clé donne accès au **niveau gratuit** (voir ses limites ci-dessous).
 
-`admin | center_admin | staff | patient` (colonne `users.role`). Chaque donnée
-(patient, scan, RDV) porte un `center_id` : un centre ne voit que ses données.
-Le rôle est résolu au login Google (`SUPER_ADMIN_EMAILS`, invitations centre,
-patients créés par un centre). Voir `src/middleware.ts` (garde par rôle).
+## Installation
 
-## Flux principal
+```bash
+git clone <ce-dépôt> nextiaa-voice
+cd nextiaa-voice
+npm install
+cp .env.example .env
+# puis éditer .env et coller la clé dans GEMINI_API_KEY
+```
 
-`Centre crée un patient → le scanne → Gemini analyse → routine générée →
-"Envoyer au patient" (Resend) → le patient se connecte en Google (même email)
-et retrouve résultats + routine + rendez-vous.`
+## Lancement
 
-## Variables d'environnement
+```bash
+npm run dev
+```
 
-Voir `.env.example`. Clés : `DATABASE_URL`, `GEMINI_API_KEY`, `RESEND_API_KEY`,
-`RESEND_FROM`, `AUTH_SECRET`, `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`,
-`SUPER_ADMIN_EMAILS`, `NEXT_PUBLIC_APP_URL`.
+- Interface (téléphone simulé) : <http://localhost:5173>
+- Console d'administration : <http://localhost:5173/console>
+- Serveur (API + WebSocket) : <http://localhost:8787>
 
-## Déploiement Vercel
+Le serveur démarre même **sans clé** (l'interface indique alors « clé
+absente ») : pratique pour explorer l'UI, mais les appels échoueront tant que
+`GEMINI_API_KEY` n'est pas renseignée.
 
-1. Importer le repo dans Vercel.
-2. Renseigner toutes les variables d'environnement.
-3. Déployer. Le build lance automatiquement les migrations Neon
-   (`next build && npm run db:migrate`, voir `vercel.json`).
-4. Créer le client **OAuth Google** avec l'URI de redirection
-   `<NEXT_PUBLIC_APP_URL>/api/auth/google/callback`, puis renseigner
-   `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` et redéployer.
-5. Se connecter avec un email listé dans `SUPER_ADMIN_EMAILS` → espace Admin.
+## Utilisation rapide
 
-En local : `cp .env.example .env`, remplir, `npm install`, `npm run db:migrate`,
-`npm run dev`.
+1. En haut de l'écran, choisir la **SIM simulée** (Orange ou MTN) et un
+   **numéro fictif** (clairement marqué « fictif »).
+2. Composer **`8000`** puis appuyer sur le bouton vert pour parler à
+   l'assistant.
+3. Autoriser le **micro** quand le navigateur le demande.
+4. Parler naturellement en français (ou en anglais).
 
-## Schéma
+Scénarios de démonstration détaillés : [`docs/DEMO.md`](docs/DEMO.md).
 
-`centers`, `licenses`, `users`, `skin_profiles`, `scans`, `scan_metrics`,
-`appointments`, `result_emails`, `products`, `license_transactions`.
-Migrations versionnées dans `drizzle/`.
+## Limites du niveau gratuit
 
-## Pipeline Gemini
+- Les modèles Live sont en **preview** : noms et quotas évoluent (voir
+  [`docs/GEMINI_NOTES.md`](docs/GEMINI_NOTES.md)).
+- **Limites de débit** : au-delà du quota (**erreur 429**), l'assistant joue un
+  bip, affiche « Service momentanément saturé, réessayez dans un instant » et
+  termine proprement l'appel.
+- Sessions audio limitées à **~15 minutes** ; la durée max d'appel est réglée à
+  **10 minutes** par défaut (`.env` `MAX_CALL_MINUTES`).
+- **Confidentialité** : sur le niveau gratuit, Google peut exploiter les
+  échanges — d'où la règle **données fictives uniquement**.
 
-Image compressée (base64) + contrôle qualité **côté client** (jamais d'appel
-Gemini inutile) → prompt JSON strict (score global + 7 critères, sévérité,
-zone, explication) normalisé (`src/lib/gemini.ts`) → routine par règles-métier
-(`src/lib/routine.ts`).
+## Configuration (`.env`)
+
+Voir [`.env.example`](.env.example) pour la liste commentée. Points clés :
+
+| Variable | Rôle |
+|---|---|
+| `GEMINI_API_KEY` | Clé du niveau gratuit (**jamais** dans le navigateur). |
+| `GEMINI_LIVE_MODEL` | Modèle Live (défaut `gemini-3.1-flash-live-preview`). |
+| `GEMINI_VOICE` | Voix prédéfinie (défaut `Kore`). |
+| `DEMO_NUMBERS` | Numéros qui joignent l'assistant (défaut `8000`). |
+| `USSD_CODE` | Code USSD simulé (défaut `#136#`). |
+| `MAX_CALL_MINUTES` | Durée max d'appel. |
+| `CONSOLE_PASSWORD` | Mot de passe simple de la console (local). |
+
+## Documentation
+
+- [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) — schéma, protocole WebSocket,
+  migration vers une vraie ligne téléphonique (SIP).
+- [`docs/GEMINI_NOTES.md`](docs/GEMINI_NOTES.md) — modèle, paramètres, limites,
+  voix testées.
+- [`docs/DEMO.md`](docs/DEMO.md) — scénarios prêts pour un rendez-vous client.
+- [`CLAUDE.md`](CLAUDE.md) — conventions du projet.
+
+## Sécurité & confidentialité
+
+- La clé Gemini reste **côté serveur**. Le navigateur ne parle qu'à notre
+  serveur Node.
+- `.env` est ignoré par git ; aucun secret n'est committé.
+- Les journaux ne contiennent **jamais** la clé API.
