@@ -6,6 +6,7 @@ import type { ToolExecutor, ToolExecutionContext } from '../call/CallSession.js'
 import { logger } from '../logger.js';
 import { searchKnowledgeBase } from './knowledgeBase.js';
 import { sendSms } from './sms.js';
+import { VerificationStore } from './verification.js';
 
 type ToolResult = { ok: boolean; response: Record<string, unknown> };
 type Handler = (args: Record<string, unknown>, ctx: ToolExecutionContext) => ToolResult | Promise<ToolResult>;
@@ -25,9 +26,16 @@ interface RegisteredTool {
  */
 export class ToolRouter implements ToolExecutor {
   private readonly tools = new Map<ToolName, RegisteredTool>();
+  private readonly verification = new VerificationStore();
 
   constructor(private readonly repo: Repository) {
     this.registerJ3();
+    this.registerJ4();
+  }
+
+  /** Libère l'état de vérification en mémoire à la fin d'un appel. */
+  onCallEnded(callId: string): void {
+    this.verification.clear(callId);
   }
 
   get declarations(): FunctionDeclaration[] {
@@ -121,6 +129,147 @@ export class ToolRouter implements ToolExecutor {
       (args, ctx) => {
         const result = sendSms(this.repo, ctx.transport, args as z.infer<(typeof TOOL_ARG_SCHEMAS)['send_sms']>);
         return { ok: result.ok, response: result as unknown as Record<string, unknown> };
+      },
+    );
+  }
+
+  // ── Jalon J4 ───────────────────────────────────────────────
+  private registerJ4(): void {
+    this.register(
+      'create_ticket',
+      {
+        description:
+          "Crée un ticket (incident, demande technicien). À utiliser après confirmation de l'appelant. " +
+          "Renvoie une référence du type NXV-2026-0001 à communiquer à l'appelant.",
+        parametersJsonSchema: {
+          type: 'object',
+          properties: {
+            category: { type: 'string', description: "Catégorie du ticket (ex. 'depannage', 'facturation')." },
+            summary: { type: 'string', description: "Résumé clair du problème." },
+            priority: { type: 'string', enum: ['haute', 'moyenne', 'normale'], description: 'Priorité.' },
+          },
+          required: ['category', 'summary', 'priority'],
+        },
+      },
+      (args, ctx) => {
+        const a = args as z.infer<(typeof TOOL_ARG_SCHEMAS)['create_ticket']>;
+        const ticket = this.repo.createTicket({
+          reference: this.repo.nextTicketReference(),
+          callId: ctx.callId,
+          category: a.category,
+          summary: a.summary,
+          priority: a.priority,
+        });
+        return { ok: true, response: { reference: ticket.reference, priority: ticket.priority } };
+      },
+    );
+
+    this.register(
+      'request_verification_code',
+      {
+        description:
+          "Génère un code de vérification à 4 chiffres et l'envoie par SMS au numéro de l'appelant. " +
+          "À utiliser avant de consulter un dossier (get_case_status). Le code est valable 5 minutes.",
+        parametersJsonSchema: { type: 'object', properties: {} },
+      },
+      (_args, ctx) => {
+        const code = this.verification.generate(ctx.callId);
+        sendSms(this.repo, ctx.transport, {
+          message: `Nextiaa (démo) : votre code de vérification est ${code}. Valable 5 minutes. Ne le communiquez à personne.`,
+        });
+        return { ok: true, response: { sent: true } };
+      },
+    );
+
+    this.register(
+      'verify_caller',
+      {
+        description:
+          "Vérifie le code de vérification donné par l'appelant (3 essais maximum). " +
+          "Renvoie ok=true si le code est correct.",
+        parametersJsonSchema: {
+          type: 'object',
+          properties: { code: { type: 'string', description: 'Le code à 4 chiffres dicté par l\'appelant.' } },
+          required: ['code'],
+        },
+      },
+      (args, ctx) => {
+        const a = args as z.infer<(typeof TOOL_ARG_SCHEMAS)['verify_caller']>;
+        const res = this.verification.verify(ctx.callId, a.code);
+        return { ok: res.ok, response: { ...res } };
+      },
+    );
+
+    this.register(
+      'get_case_status',
+      {
+        description:
+          "Donne l'état d'un dossier de sinistre (assurance). L'appelant DOIT être vérifié au préalable " +
+          "(request_verification_code puis verify_caller), sinon l'accès est refusé.",
+        parametersJsonSchema: {
+          type: 'object',
+          properties: { caseReference: { type: 'string', description: 'Référence du dossier, ex. SIN-2026-002.' } },
+          required: ['caseReference'],
+        },
+      },
+      (args, ctx) => {
+        const a = args as z.infer<(typeof TOOL_ARG_SCHEMAS)['get_case_status']>;
+        if (!this.verification.isVerified(ctx.callId)) {
+          return { ok: false, response: { error: 'Appelant non vérifié. Vérifie l\'identité avant de consulter un dossier.' } };
+        }
+        const c = this.repo.getCase(a.caseReference.trim().toUpperCase());
+        if (!c) return { ok: true, response: { found: false } };
+        return {
+          ok: true,
+          response: { found: true, reference: c.reference, status: c.status, detail: c.detail, nextStep: c.next_step },
+        };
+      },
+    );
+
+    this.register(
+      'transfer_to_human',
+      {
+        description:
+          "Transfère l'appel vers un conseiller humain (simulé). Crée un ticket avec le résumé, puis annonce " +
+          "à l'appelant qu'un conseiller le rappellera. À utiliser après confirmation.",
+        parametersJsonSchema: {
+          type: 'object',
+          properties: {
+            reason: { type: 'string', description: 'Motif du transfert.' },
+            summary: { type: 'string', description: "Résumé de l'échange pour le conseiller." },
+          },
+          required: ['reason', 'summary'],
+        },
+      },
+      (args, ctx) => {
+        const a = args as z.infer<(typeof TOOL_ARG_SCHEMAS)['transfer_to_human']>;
+        const ticket = this.repo.createTicket({
+          reference: this.repo.nextTicketReference(),
+          callId: ctx.callId,
+          category: 'transfert',
+          summary: `${a.reason} — ${a.summary}`,
+          priority: 'haute',
+        });
+        ctx.setStatus('transferred');
+        return { ok: true, response: { reference: ticket.reference, transferred: true } };
+      },
+    );
+
+    this.register(
+      'end_call',
+      {
+        description:
+          "Termine proprement l'appel après le résumé et l'au revoir. Laisse l'audio en cours se terminer.",
+        parametersJsonSchema: {
+          type: 'object',
+          properties: { reason: { type: 'string', description: 'Motif de fin (ex. demande de l\'appelant, résolu).' } },
+          required: ['reason'],
+        },
+      },
+      (args, ctx) => {
+        const a = args as z.infer<(typeof TOOL_ARG_SCHEMAS)['end_call']>;
+        ctx.requestHangup(`end_call:${a.reason}`);
+        return { ok: true, response: { ending: true } };
       },
     );
   }

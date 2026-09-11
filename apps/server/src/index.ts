@@ -106,7 +106,11 @@ async function main(): Promise<void> {
         onTranscriptFinal: (who, text, latencyMs) => repo.addTurn(transport.callId, who, text, latencyMs),
         onStatus: (status) => repo.setCallStatus(transport.callId, status),
         onEnded: ({ callId, reason, durationSec, usage }) => {
-          const status = reason === 'quota' || reason.startsWith('gemini') ? 'error' : 'ended';
+          toolRouter.onCallEnded(callId);
+          // On préserve un statut métier terminal déjà posé (ex. transféré).
+          const current = repo.getCall(callId)?.status;
+          const computed = reason === 'quota' || reason.startsWith('gemini') ? 'error' : 'ended';
+          const status = current === 'transferred' || current === 'resolved' ? current : computed;
           repo.endCall(callId, durationSec, status, reason, usage ? JSON.stringify(usage) : null);
         },
       }, logger);

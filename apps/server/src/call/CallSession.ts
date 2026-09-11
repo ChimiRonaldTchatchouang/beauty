@@ -26,6 +26,8 @@ export interface ToolExecutionContext {
   transport: CallTransport;
   /** Demande de fin d'appel propre (outil end_call). */
   requestHangup(reason: string): void;
+  /** Change le statut de l'appel (ex. 'transferred', 'resolved'). */
+  setStatus(status: string): void;
 }
 
 export interface CallSessionOptions {
@@ -195,6 +197,7 @@ export class CallSession {
           simOperator: this.opts.simOperator,
           transport: this.transport,
           requestHangup: (reason) => this.gracefulHangup(reason),
+          setStatus: (status) => this.opts.onStatus?.(status),
         });
         responses.push({ id: call.id, name, response: result.response });
         this.transport.sendEvent({ type: 'tool.result', name, ok: result.ok });
