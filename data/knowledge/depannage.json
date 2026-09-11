@@ -1,0 +1,62 @@
+[
+  {
+    "id": "dep-wm100-ne-demarre-pas-001",
+    "category": "depannage",
+    "operator": null,
+    "title": "Machine à laver Marque Démo WM-100 : ne démarre pas",
+    "content": "Sécurité d'abord : débranchez l'appareil avant toute manipulation. 1) Vérifiez que la prise fonctionne (testez avec un autre appareil). 2) Vérifiez que la porte est bien fermée (le hublot doit cliquer). 3) Vérifiez que le robinet d'arrivée d'eau est ouvert. 4) Rebranchez et relancez un programme court. Si l'appareil ne réagit toujours pas, ou en cas d'odeur de brûlé ou d'étincelles, arrêtez tout et faites intervenir un technicien.",
+    "source": "Guide générique de dépannage Nextiaa (appareil fictif WM-100)",
+    "lastVerified": "2026-09-11",
+    "verified": true
+  },
+  {
+    "id": "dep-wm100-ne-vidange-pas-001",
+    "category": "depannage",
+    "operator": null,
+    "title": "Machine à laver Marque Démo WM-100 : ne vidange plus",
+    "content": "Sécurité d'abord : débranchez l'appareil et fermez le robinet d'eau. 1) Placez une bassine et une serpillière au sol (de l'eau va s'écouler). 2) Ouvrez la petite trappe en bas de l'appareil et nettoyez le filtre de vidange (retirez cheveux, pièces, peluches). 3) Vérifiez que le tuyau de vidange n'est pas plié ni bouché. 4) Remontez le filtre, rebranchez et lancez un essorage. Si l'eau ne s'évacue toujours pas, proposez un ticket technicien.",
+    "source": "Guide générique de dépannage Nextiaa (appareil fictif WM-100)",
+    "lastVerified": "2026-09-11",
+    "verified": true
+  },
+  {
+    "id": "dep-wm100-fuit-001",
+    "category": "depannage",
+    "operator": null,
+    "title": "Machine à laver Marque Démo WM-100 : fuit / présence d'eau",
+    "content": "Sécurité d'abord : débranchez l'appareil et fermez le robinet d'arrivée d'eau (l'eau et l'électricité sont dangereuses ensemble). 1) Épongez l'eau au sol. 2) Vérifiez le serrage du tuyau d'arrivée d'eau et du tuyau de vidange. 3) Vérifiez le joint du hublot (propreté, absence de déchirure). En cas de fuite importante ou continue, arrêtez d'utiliser l'appareil et faites intervenir un technicien.",
+    "source": "Guide générique de dépannage Nextiaa (appareil fictif WM-100)",
+    "lastVerified": "2026-09-11",
+    "verified": true
+  },
+  {
+    "id": "dep-wm100-erreur-e1-001",
+    "category": "depannage",
+    "operator": null,
+    "title": "Machine à laver Marque Démo WM-100 : code d'erreur E1 (fictif)",
+    "content": "Sécurité d'abord : débranchez l'appareil quelques minutes. Le code E1 (code de démonstration fictif) indique un problème d'arrivée d'eau. 1) Vérifiez que le robinet est ouvert et que la pression d'eau est suffisante. 2) Vérifiez que le tuyau d'arrivée n'est pas plié. 3) Nettoyez le petit filtre à l'entrée du tuyau d'arrivée d'eau. 4) Rebranchez et relancez. Si E1 persiste, proposez un ticket technicien.",
+    "source": "Guide générique de dépannage Nextiaa (appareil fictif WM-100)",
+    "lastVerified": "2026-09-11",
+    "verified": true
+  },
+  {
+    "id": "dep-wm100-vibre-001",
+    "category": "depannage",
+    "operator": null,
+    "title": "Machine à laver Marque Démo WM-100 : vibre fortement / fait du bruit",
+    "content": "Sécurité d'abord : débranchez l'appareil avant d'y toucher. 1) Vérifiez que la machine est bien de niveau et posée sur un sol stable (ajustez les pieds). 2) Vérifiez que les brides de transport à l'arrière ont bien été retirées. 3) Répartissez le linge de façon équilibrée dans le tambour. 4) Rebranchez et lancez un essorage à vide pour tester. Si le bruit est métallique ou anormal, proposez un ticket technicien.",
+    "source": "Guide générique de dépannage Nextiaa (appareil fictif WM-100)",
+    "lastVerified": "2026-09-11",
+    "verified": true
+  },
+  {
+    "id": "dep-wm100-mauvaise-odeur-001",
+    "category": "depannage",
+    "operator": null,
+    "title": "Machine à laver Marque Démo WM-100 : mauvaise odeur",
+    "content": "Sécurité d'abord : ne mélangez jamais de produits d'entretien. 1) Nettoyez le bac à lessive et le joint du hublot. 2) Lancez un cycle à vide à haute température avec un nettoyant pour machine. 3) Laissez le hublot entrouvert entre deux lessives pour aérer. NB : si l'odeur est une odeur de BRÛLÉ (et non de moisi), débranchez immédiatement et faites intervenir un technicien.",
+    "source": "Guide générique de dépannage Nextiaa (appareil fictif WM-100)",
+    "lastVerified": "2026-09-11",
+    "verified": true
+  }
+]

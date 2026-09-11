@@ -1,0 +1,22 @@
+[
+  {
+    "id": "assur-declarer-sinistre-001",
+    "category": "assurance",
+    "operator": null,
+    "title": "Déclarer un sinistre automobile (procédure générale)",
+    "content": "Ceci est une procédure de démonstration fictive. 1) Mettez-vous en sécurité et, en cas de blessés, appelez les secours. 2) Notez les informations de l'autre partie (plaque, assurance) et prenez des photos. 3) Déclarez le sinistre à votre assureur dans les délais prévus par votre contrat. 4) Conservez la référence de dossier communiquée (format fictif SIN-2026-XXX). Pour connaître l'état d'un dossier, l'appelant doit d'abord être vérifié par code SMS.",
+    "source": "Fiche d'exemple fictive Nextiaa (démonstration uniquement)",
+    "lastVerified": "2026-09-11",
+    "verified": true
+  },
+  {
+    "id": "assur-pieces-001",
+    "category": "assurance",
+    "operator": null,
+    "title": "Pièces utiles pour un dossier de sinistre (exemple)",
+    "content": "Exemple fictif de pièces généralement utiles : constat amiable rempli, photos des dommages, copie de la pièce d'identité, copie de la carte grise, coordonnées des témoins éventuels. La liste exacte dépend du contrat ; en cas de doute, proposez un transfert vers un conseiller.",
+    "source": "Fiche d'exemple fictive Nextiaa (démonstration uniquement)",
+    "lastVerified": "2026-09-11",
+    "verified": true
+  }
+]

@@ -1,0 +1,82 @@
+[
+  {
+    "id": "op-orange-internet-001",
+    "category": "operateurs",
+    "operator": "orange",
+    "title": "Souscrire à un forfait internet Orange",
+    "content": "À RENSEIGNER PAR NEXTIAA",
+    "source": "Site officiel Orange Cameroun / ARTel — à vérifier et coller le lien",
+    "lastVerified": "",
+    "verified": false
+  },
+  {
+    "id": "op-orange-momo-001",
+    "category": "operateurs",
+    "operator": "orange",
+    "title": "Ouvrir un compte Orange Money",
+    "content": "À RENSEIGNER PAR NEXTIAA",
+    "source": "Site officiel Orange Money — à vérifier et coller le lien",
+    "lastVerified": "",
+    "verified": false
+  },
+  {
+    "id": "op-orange-solde-001",
+    "category": "operateurs",
+    "operator": "orange",
+    "title": "Consulter son solde et ses forfaits Orange",
+    "content": "À RENSEIGNER PAR NEXTIAA",
+    "source": "Service client Orange — à vérifier",
+    "lastVerified": "",
+    "verified": false
+  },
+  {
+    "id": "op-mtn-internet-001",
+    "category": "operateurs",
+    "operator": "mtn",
+    "title": "Souscrire à un forfait internet MTN",
+    "content": "À RENSEIGNER PAR NEXTIAA",
+    "source": "Site officiel MTN Cameroun / ARTel — à vérifier et coller le lien",
+    "lastVerified": "",
+    "verified": false
+  },
+  {
+    "id": "op-mtn-momo-001",
+    "category": "operateurs",
+    "operator": "mtn",
+    "title": "Ouvrir un compte MTN MoMo",
+    "content": "À RENSEIGNER PAR NEXTIAA",
+    "source": "Site officiel MTN MoMo — à vérifier et coller le lien",
+    "lastVerified": "",
+    "verified": false
+  },
+  {
+    "id": "op-mtn-solde-001",
+    "category": "operateurs",
+    "operator": "mtn",
+    "title": "Consulter son solde et ses forfaits MTN",
+    "content": "À RENSEIGNER PAR NEXTIAA",
+    "source": "Service client MTN — à vérifier",
+    "lastVerified": "",
+    "verified": false
+  },
+  {
+    "id": "op-exemple-fictif-orange-001",
+    "category": "operateurs",
+    "operator": "orange",
+    "title": "EXEMPLE FICTIF — Forfait internet de démonstration Orange",
+    "content": "Ceci est un EXEMPLE FICTIF pour la démonstration (aucune valeur réelle). Pour activer le forfait internet de démonstration, composez le code dièse, zéro, zéro, zéro, dièse (#000#), puis suivez le menu et choisissez l'option 1. Le forfait de démonstration coûte zéro franc et n'existe pas réellement. Ne communiquez jamais votre code secret Orange Money.",
+    "source": "Fiche d'exemple fictive Nextiaa (démonstration uniquement)",
+    "lastVerified": "2026-09-11",
+    "verified": true
+  },
+  {
+    "id": "op-exemple-fictif-mtn-001",
+    "category": "operateurs",
+    "operator": "mtn",
+    "title": "EXEMPLE FICTIF — Forfait internet de démonstration MTN",
+    "content": "Ceci est un EXEMPLE FICTIF pour la démonstration (aucune valeur réelle). Pour activer le forfait internet de démonstration, composez le code dièse, zéro, zéro, zéro, dièse (#000#), puis choisissez l'option 2. Le forfait de démonstration coûte zéro franc et n'existe pas réellement. Ne communiquez jamais votre code secret MTN MoMo.",
+    "source": "Fiche d'exemple fictive Nextiaa (démonstration uniquement)",
+    "lastVerified": "2026-09-11",
+    "verified": true
+  }
+]

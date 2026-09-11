@@ -1,0 +1,32 @@
+[
+  {
+    "id": "gen-presentation-001",
+    "category": "general",
+    "operator": null,
+    "title": "Présentation de Nextiaa Voice",
+    "content": "Nextiaa Voice est un assistant vocal automatique de démonstration édité par Nextiaa, agence de développement logiciel et d'automatisation IA basée à Douala. Il répond aux questions courantes, lit des informations vérifiées, envoie des récapitulatifs par SMS et peut transférer vers un conseiller. Il ne remplace pas un conseiller humain pour les cas complexes.",
+    "source": "Fiche d'exemple fictive Nextiaa (démonstration uniquement)",
+    "lastVerified": "2026-09-11",
+    "verified": true
+  },
+  {
+    "id": "gen-horaires-001",
+    "category": "general",
+    "operator": null,
+    "title": "Horaires du service client (fictifs)",
+    "content": "Horaires de démonstration FICTIFS : le service client est joignable du lundi au vendredi de 8 h à 18 h et le samedi de 9 h à 13 h (heure du Cameroun). En dehors de ces horaires, l'assistant peut prendre un message ou créer un ticket de rappel.",
+    "source": "Fiche d'exemple fictive Nextiaa (démonstration uniquement)",
+    "lastVerified": "2026-09-11",
+    "verified": true
+  },
+  {
+    "id": "gen-securite-donnees-001",
+    "category": "general",
+    "operator": null,
+    "title": "Sécurité et données personnelles",
+    "content": "L'assistant ne demande jamais de code secret Mobile Money, de code PIN ni de mot de passe. Il ne donne pas de conseil médical, juridique ou financier personnalisé. Toutes les données de cette démonstration sont fictives.",
+    "source": "Fiche d'exemple fictive Nextiaa (démonstration uniquement)",
+    "lastVerified": "2026-09-11",
+    "verified": true
+  }
+]

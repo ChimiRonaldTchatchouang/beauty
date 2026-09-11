@@ -39,6 +39,12 @@ export interface CallSessionOptions {
   resumeHandle?: string;
   /** Outils disponibles (vide au J1). */
   toolExecutor?: ToolExecutor;
+  /** Persistance d'une ligne de transcription finale. */
+  onTranscriptFinal?(who: 'user' | 'agent', text: string, latencyMs: number | null): void;
+  /** Persistance d'une mesure de latence de tour. */
+  onLatency?(latencyMs: number): void;
+  /** Marque l'appel comme transféré (statut console). */
+  onStatus?(status: string): void;
   /** Notification de fin d'appel (persistance, métriques). */
   onEnded?(info: { callId: string; reason: string; durationSec: number; usage: UsageMetadata | null }): void;
 }
@@ -56,6 +62,11 @@ export class CallSession {
   private resumeHandle: string | undefined;
   private maxTimer: NodeJS.Timeout | null = null;
   private warnTimer: NodeJS.Timeout | null = null;
+  // Accumulation des fragments de transcription jusqu'au marqueur « final ».
+  private userBuf = '';
+  private agentBuf = '';
+  // Dernière latence rapportée par le navigateur, attachée au prochain tour agent.
+  private pendingLatencyMs: number | null = null;
 
   constructor(
     private readonly transport: CallTransport,
@@ -84,8 +95,24 @@ export class CallSession {
       },
       {
         onAudio: (pcm24k) => this.transport.sendAudio(pcm24k),
-        onInputTranscript: (text, final) => this.transport.sendEvent({ type: 'transcript.user', text, final }),
-        onOutputTranscript: (text, final) => this.transport.sendEvent({ type: 'transcript.agent', text, final }),
+        onInputTranscript: (text, final) => {
+          this.transport.sendEvent({ type: 'transcript.user', text, final });
+          this.userBuf += text;
+          if (final && this.userBuf.trim()) {
+            this.opts.onTranscriptFinal?.('user', this.userBuf.trim(), null);
+            this.userBuf = '';
+          }
+        },
+        onOutputTranscript: (text, final) => {
+          this.transport.sendEvent({ type: 'transcript.agent', text, final });
+          this.agentBuf += text;
+          if (final && this.agentBuf.trim()) {
+            // La latence mesurée côté navigateur est attachée au tour de l'assistant.
+            this.opts.onTranscriptFinal?.('agent', this.agentBuf.trim(), this.pendingLatencyMs);
+            this.pendingLatencyMs = null;
+            this.agentBuf = '';
+          }
+        },
         onInterrupted: () => this.transport.flushPlayback(),
         onTurnComplete: () => {
           /* fin de tour ; la latence est mesurée côté navigateur (J5). */
@@ -136,6 +163,8 @@ export class CallSession {
         this.muted = event.muted;
         break;
       case 'metrics.turn.report':
+        this.pendingLatencyMs = event.latencyMs;
+        this.opts.onLatency?.(event.latencyMs);
         this.transport.sendEvent({ type: 'metrics.turn', latencyMs: event.latencyMs });
         break;
       // ussd.select est géré au niveau du menu USSD (J6).

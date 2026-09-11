@@ -1,0 +1,4 @@
+id,category,operator,title,content,source,lastVerified,verified
+op-orange-internet-001,operateurs,orange,Souscrire à un forfait internet Orange,"Écrire ici le contenu vérifié (code, étapes, prix).",Lien officiel à coller,2026-09-11,true
+op-mtn-momo-001,operateurs,mtn,Ouvrir un compte MTN MoMo,"Écrire ici le contenu vérifié.",Lien officiel à coller,2026-09-11,true
+gen-exemple-001,general,,Titre de la fiche,"Contenu de la fiche. Les virgules dans le texte doivent être entre guillemets.",Source,2026-09-11,false

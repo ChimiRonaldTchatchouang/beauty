@@ -20,12 +20,20 @@ export interface StartParams {
   accessMode?: 'direct' | 'ussd_callback';
 }
 
+export interface SmsMessage {
+  id: number;
+  from: string;
+  body: string;
+  at: string;
+}
+
 export interface CallState {
   status: CallStatus;
   transcripts: TranscriptLine[];
   error: string | null;
   muted: boolean;
   lastEndReason: string | null;
+  sms: SmsMessage[];
 }
 
 /**
@@ -39,7 +47,9 @@ export function useCall() {
     error: null,
     muted: false,
     lastEndReason: null,
+    sms: [],
   });
+  const smsIdRef = useRef(0);
 
   const engineRef = useRef<AudioEngine | null>(null);
   const clientRef = useRef<CallClient | null>(null);
@@ -93,6 +103,12 @@ export function useCall() {
         case 'transcript.agent':
           appendTranscript('agent', event.text, event.final);
           break;
+        case 'sms.received':
+          setState((p) => ({
+            ...p,
+            sms: [{ id: ++smsIdRef.current, from: event.from, body: event.body, at: event.at }, ...p.sms],
+          }));
+          break;
         case 'call.ended':
           setState((p) => ({ ...p, status: 'ended', lastEndReason: event.reason }));
           void cleanup();
@@ -110,7 +126,8 @@ export function useCall() {
 
   const start = useCallback(
     async (params: StartParams) => {
-      setState({ status: 'connecting', transcripts: [], error: null, muted: false, lastEndReason: null });
+      // On conserve la boîte SMS entre les appels (comme un vrai téléphone).
+      setState((p) => ({ status: 'connecting', transcripts: [], error: null, muted: false, lastEndReason: null, sms: p.sms }));
       openLineRef.current = { user: null, agent: null };
 
       const engine = new AudioEngine();

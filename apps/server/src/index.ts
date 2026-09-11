@@ -7,6 +7,9 @@ import { logger, loggerOptions } from './logger.js';
 import { BrowserTransport } from './telephony/BrowserTransport.js';
 import { CallSession } from './call/CallSession.js';
 import { registerConfigRoutes } from './api/config.routes.js';
+import { Repository } from './db/repository.js';
+import { seed } from './db/seed.js';
+import { ToolRouter } from './tools/index.js';
 
 /**
  * Point d'entrée du serveur Nextiaa Voice.
@@ -18,6 +21,12 @@ import { registerConfigRoutes } from './api/config.routes.js';
 async function main(): Promise<void> {
   const app = Fastify({ logger: loggerOptions });
   await app.register(websocket);
+
+  // Base de données : ouverture, schéma, données fictives (au premier démarrage).
+  const repo = new Repository();
+  seed(repo);
+  const toolRouter = new ToolRouter(repo);
+
   await registerConfigRoutes(app);
 
   app.get('/health', async () => ({
@@ -69,6 +78,20 @@ async function main(): Promise<void> {
         dialed: start.dialed,
       });
 
+      // Création de l'appel en base (persistance + console).
+      try {
+        repo.createCall({
+          id: transport.callId,
+          caller_number: start.callerNumber,
+          dialed: start.dialed,
+          sim_operator: start.simOperator,
+          access_mode: start.accessMode,
+          phone_quality: start.phoneQualityMode ? 1 : 0,
+        });
+      } catch (err) {
+        logger.error({ err }, 'Échec createCall');
+      }
+
       const rt = getRuntimeSettings();
       const session = new CallSession(transport, {
         apiKey: config.GEMINI_API_KEY,
@@ -79,7 +102,13 @@ async function main(): Promise<void> {
         simOperator: start.simOperator,
         accessMode: start.accessMode,
         resumeHandle: start.resumeToken,
-        // toolExecutor et onEnded seront branchés aux jalons J3/J4/J5.
+        toolExecutor: toolRouter,
+        onTranscriptFinal: (who, text, latencyMs) => repo.addTurn(transport.callId, who, text, latencyMs),
+        onStatus: (status) => repo.setCallStatus(transport.callId, status),
+        onEnded: ({ callId, reason, durationSec, usage }) => {
+          const status = reason === 'quota' || reason.startsWith('gemini') ? 'error' : 'ended';
+          repo.endCall(callId, durationSec, status, reason, usage ? JSON.stringify(usage) : null);
+        },
       }, logger);
 
       void session.start();

@@ -6,6 +6,7 @@ import { Tones } from '../audio/ringtone.js';
 import { PhoneFrame } from './PhoneFrame.js';
 import { Dialer } from './Dialer.js';
 import { InCall } from './InCall.js';
+import { SmsApp } from './SmsApp.js';
 import { TranscriptPanel } from './TranscriptPanel.js';
 import { FICTIONAL_NUMBERS, OPERATORS } from './profile.js';
 
@@ -32,7 +33,15 @@ export default function Phone() {
   const [callerNumber, setCallerNumber] = useState(FICTIONAL_NUMBERS[0]!.value);
   const [phoneQuality, setPhoneQuality] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
+  const [showSms, setShowSms] = useState(false);
+  const [seenSms, setSeenSms] = useState(0);
   const tonesRef = useRef<Tones | null>(null);
+
+  const unreadSms = state.sms.length - seenSms;
+  const openSms = () => {
+    setShowSms(true);
+    setSeenSms(state.sms.length);
+  };
 
   const getTones = () => (tonesRef.current ??= new Tones());
 
@@ -133,12 +142,29 @@ export default function Phone() {
       <div className="grid gap-6 md:grid-cols-[380px_1fr]">
         <div>
           <PhoneFrame>
-            {phase === 'incall' ? (
+            {/* Notification SMS en haut de l'écran. */}
+            {unreadSms > 0 && !showSms && (
+              <button
+                onClick={openSms}
+                className="mx-2 mt-2 flex items-center gap-2 rounded-lg bg-nextiaa-orange px-3 py-2 text-left text-sm text-white shadow"
+              >
+                ✉️ {unreadSms} nouveau{unreadSms > 1 ? 'x' : ''} SMS — appuyez pour ouvrir
+              </button>
+            )}
+
+            {showSms ? (
+              <SmsApp messages={state.sms} onClose={() => setShowSms(false)} />
+            ) : phase === 'incall' ? (
               <InCall status={state.status} muted={state.muted} onToggleMute={toggleMute} onHangup={onHangup} />
             ) : phase === 'ended' ? (
               <EndedScreen reason={state.error ?? state.lastEndReason} onBack={() => setPhase('home')} />
             ) : (
-              <Dialer onCall={call} />
+              <>
+                <Dialer onCall={call} />
+                <button onClick={openSms} className="mb-3 mx-auto flex items-center gap-2 text-sm text-gray-500">
+                  ✉️ Messages{state.sms.length > 0 ? ` (${state.sms.length})` : ''}
+                </button>
+              </>
             )}
           </PhoneFrame>
           {notice && <p className="mt-2 rounded bg-amber-50 p-2 text-center text-sm text-amber-800">{notice}</p>}
