@@ -1,21 +1,23 @@
 import Fastify from 'fastify';
 import websocket from '@fastify/websocket';
-import { config } from './config.js';
+import type { WebSocket } from 'ws';
+import { CallStartSchema } from '@nextiaa/shared';
+import { config, getRuntimeSettings } from './config.js';
 import { logger } from './logger.js';
+import { BrowserTransport } from './telephony/BrowserTransport.js';
+import { CallSession } from './call/CallSession.js';
 
 /**
  * Point d'entrée du serveur Nextiaa Voice.
  *
- * J0 : squelette qui démarre proprement (health check + route WS /ws/call
- * qui accepte la connexion). La logique d'appel (CallSession + Gemini Live)
- * est branchée au jalon J1.
+ * J1 : boucle audio complète. La route /ws/call attend un `call.start`, valide
+ * le numéro composé, crée un BrowserTransport puis une CallSession reliée à
+ * Gemini Live.
  */
 async function main(): Promise<void> {
   const app = Fastify({ loggerInstance: logger });
-
   await app.register(websocket);
 
-  // Santé du serveur (utile pour le proxy Vite et les tests manuels).
   app.get('/health', async () => ({
     ok: true,
     service: 'nextiaa-voice-server',
@@ -24,14 +26,62 @@ async function main(): Promise<void> {
     time: new Date().toISOString(),
   }));
 
-  // Route d'appel WebSocket. Le pipeline complet arrive au J1 ;
-  // pour l'instant on accepte la connexion et on ferme proprement.
-  app.get('/ws/call', { websocket: true }, (socket) => {
-    logger.info('Connexion /ws/call (squelette J0)');
-    socket.on('message', () => {
-      // J1 : router audio binaire et événements JSON vers CallSession.
+  app.get('/ws/call', { websocket: true }, (socket: WebSocket) => {
+    // Premier message attendu : call.start (JSON). On l'attend une seule fois,
+    // avant d'attacher le transport (qui gère ensuite tous les messages).
+    socket.once('message', (data: Buffer, isBinary: boolean) => {
+      if (isBinary) {
+        safeSend(socket, { type: 'error', code: 'expected_start', message: 'Attendu : call.start' });
+        socket.close();
+        return;
+      }
+      let start;
+      try {
+        start = CallStartSchema.parse(JSON.parse(data.toString('utf8')));
+      } catch {
+        safeSend(socket, { type: 'error', code: 'bad_start', message: 'call.start invalide' });
+        socket.close();
+        return;
+      }
+
+      // Numéro non attribué (hors numéros de démo et code USSD).
+      const isDemo = config.demoNumbers.includes(start.dialed);
+      if (!isDemo) {
+        safeSend(socket, { type: 'error', code: 'unassigned', message: "Ce numéro n'est pas attribué." });
+        socket.close();
+        return;
+      }
+
+      if (!config.hasGeminiKey) {
+        safeSend(socket, {
+          type: 'error',
+          code: 'no_key',
+          message: 'Clé Gemini absente côté serveur (.env GEMINI_API_KEY).',
+        });
+        socket.close();
+        return;
+      }
+
+      const transport = new BrowserTransport(socket, {
+        callerNumber: start.callerNumber,
+        dialed: start.dialed,
+      });
+
+      const rt = getRuntimeSettings();
+      const session = new CallSession(transport, {
+        apiKey: config.GEMINI_API_KEY,
+        model: config.GEMINI_LIVE_MODEL,
+        voice: rt.voice,
+        vadSilenceMs: rt.vadSilenceMs,
+        maxCallMinutes: rt.maxCallMinutes,
+        simOperator: start.simOperator,
+        accessMode: start.accessMode,
+        resumeHandle: start.resumeToken,
+        // toolExecutor et onEnded seront branchés aux jalons J3/J4/J5.
+      }, logger);
+
+      void session.start();
     });
-    socket.on('close', () => logger.info('Fermeture /ws/call'));
   });
 
   if (!config.hasGeminiKey) {
@@ -47,6 +97,15 @@ async function main(): Promise<void> {
   } catch (err) {
     logger.error(err, 'Échec du démarrage du serveur');
     process.exit(1);
+  }
+}
+
+/** Envoi JSON robuste (avant que le transport ne prenne le relais). */
+function safeSend(socket: WebSocket, event: { type: string; [k: string]: unknown }): void {
+  try {
+    if (socket.readyState === socket.OPEN) socket.send(JSON.stringify(event));
+  } catch {
+    /* ignore */
   }
 }
 
