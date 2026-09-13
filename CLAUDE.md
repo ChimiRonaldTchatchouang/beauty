@@ -11,9 +11,10 @@ téléphonique (SIP)** sans réécriture. Édité par **Nextiaa** (Douala, Camer
 
 ## Contraintes non négociables
 
-1. **Zéro service payant.** Seule l'API Gemini (niveau **gratuit** AI Studio).
-   Pas de Twilio/Telnyx/Vapi/LiveKit Cloud, pas de SMS payant, pas de base
-   hébergée, pas d'hébergement payant. Tout tourne en local, open source.
+1. **Zéro service payant.** API Gemini (niveau **gratuit** AI Studio),
+   base **Neon** (Postgres, free tier) et hébergement **Render** (free tier).
+   Pas de Twilio/Telnyx/Vapi/LiveKit Cloud, pas de SMS payant. Uniquement des
+   briques open source / niveaux gratuits.
 2. **Voix-à-voix** avec Gemini Live (pas de chaîne STT → LLM → TTS séparée).
 3. **La clé API ne va JAMAIS dans le navigateur.** Architecture
    serveur-à-serveur : navigateur → serveur Node → Gemini.
@@ -31,7 +32,7 @@ téléphonique (SIP)** sans réécriture. Édité par **Nextiaa** (Douala, Camer
 ```
 nextiaa-voice/
 ├── packages/shared/   # contrat WS + schémas d'outils (zod), partagé web/serveur
-├── apps/server/       # Fastify + @google/genai + SQLite + outils
+├── apps/server/       # Fastify + @google/genai + PostgreSQL (Neon) + outils
 │   └── prompts/system.fr.md   # instructions système de l'agent
 ├── apps/web/          # React + Vite + Tailwind (téléphone simulé + console)
 ├── data/knowledge/    # fiches de la base de connaissances (importées en SQLite)
@@ -48,8 +49,9 @@ nextiaa-voice/
 | `npm run typecheck` | Typage strict sur tous les workspaces. |
 | `npm run lint` | ESLint. |
 | `npm test` | Tests unitaires (vitest). |
-| `npm run db:seed` | (Re)remplit la base SQLite avec les données fictives. |
+| `npm run db:seed` | (Re)remplit la base Neon avec les données fictives. |
 | `npm run kb:import -- chemin/fichier.csv` | Importe des fiches KB depuis un CSV. |
+| `npm start` | Lance le serveur en prod (sert aussi le web buildé). |
 
 Web sur <http://localhost:5173>, serveur sur <http://localhost:8787>
 (le web proxifie `/api`, `/ws`, `/health` vers le serveur).
@@ -59,8 +61,9 @@ Web sur <http://localhost:5173>, serveur sur <http://localhost:8787>
 Navigateur (téléphone simulé, AudioWorklets 16/24 kHz) ⇄ WebSocket `/ws/call`
 ⇄ serveur : `CallTransport` (abstraction) → `CallSession` → `GeminiLiveClient`
 → Gemini Live. Les outils passent par le `ToolRouter` ; tout est persisté en
-SQLite ; la console lit via `/api/*`. Détails et migration SIP :
-`docs/ARCHITECTURE.md`.
+**PostgreSQL (Neon)** via `pg` (repository async) ; la console lit via
+`/api/*`. Déploiement **tout-Render** (le serveur sert aussi le web). Détails,
+migration SIP et déploiement : `docs/ARCHITECTURE.md`, `docs/DEPLOIEMENT.md`.
 
 ## Règles de l'agent vocal (résumé)
 

@@ -21,6 +21,7 @@ if (existsSync(rootEnv)) {
 }
 
 const EnvSchema = z.object({
+  DATABASE_URL: z.string().default(''),
   GEMINI_API_KEY: z.string().default(''),
   GEMINI_LIVE_MODEL: z.string().default('gemini-3.1-flash-live-preview'),
   GEMINI_VOICE: z.string().default('Kore'),
@@ -39,16 +40,18 @@ const parsed = EnvSchema.parse(process.env);
 export const config = {
   ...parsed,
   monorepoRoot: MONOREPO_ROOT,
-  /** Chemin du fichier SQLite local. */
-  dbPath: resolve(MONOREPO_ROOT, 'data', 'nextiaa-voice.db'),
   /** Dossier des fiches de la base de connaissances (import initial). */
   knowledgeDir: resolve(MONOREPO_ROOT, 'data', 'knowledge'),
   /** Dossier des prompts (instructions système). */
   promptsDir: resolve(MONOREPO_ROOT, 'apps', 'server', 'prompts'),
+  /** Répertoire du web buildé, servi en production (déploiement tout-Render). */
+  webDist: resolve(MONOREPO_ROOT, 'apps', 'web', 'dist'),
   /** Numéros de démo (liste dérivée de DEMO_NUMBERS). */
   demoNumbers: parsed.DEMO_NUMBERS.split(',').map((n) => n.trim()).filter(Boolean),
   /** true si une clé Gemini est présente (permet de démarrer la démo sans clé). */
   hasGeminiKey: parsed.GEMINI_API_KEY.trim().length > 0,
+  /** true si une base Postgres (Neon) est configurée. */
+  hasDatabase: parsed.DATABASE_URL.trim().length > 0,
 } as const;
 
 export type AppConfig = typeof config;

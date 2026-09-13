@@ -8,7 +8,7 @@ import { config } from './config.js';
 export const loggerOptions: LoggerOptions = {
   level: config.NODE_ENV === 'production' ? 'info' : 'debug',
   redact: {
-    paths: ['GEMINI_API_KEY', 'apiKey', 'req.headers.authorization'],
+    paths: ['GEMINI_API_KEY', 'DATABASE_URL', 'apiKey', 'connectionString', 'req.headers.authorization'],
     censor: '[expurgé]',
   },
   transport:

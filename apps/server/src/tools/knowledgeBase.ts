@@ -12,21 +12,16 @@ export interface KbHit {
 export type KbSearchResult = { found: true; results: KbHit[] } | { found: false };
 
 /**
- * Recherche approximative (Fuse.js) dans la base de connaissances.
+ * Recherche approximative (Fuse.js) sur un ensemble de fiches DÉJÀ filtrées
+ * comme vérifiées. Fonction PURE (testée sans base de données).
  *
- * Ne considère QUE les fiches vérifiées (`verified = 1`) : c'est la garantie
- * que l'assistant ne lit jamais un contenu « À RENSEIGNER » ou non validé.
- * Renvoie jusqu'à 3 fiches, ou `{ found: false }` si rien de vérifié ne matche.
+ * Titre fortement pondéré + seuil 0.4 réglé empiriquement : les requêtes
+ * légitimes matchent, les sujets absents renvoient found=false (l'assistant ne
+ * doit jamais inventer).
  */
-export function searchKnowledgeBase(repo: Repository, args: SearchKnowledgeBaseArgs): KbSearchResult {
-  const candidates = repo.kbForSearch(args.category, args.operator);
-  if (candidates.length === 0) return { found: false };
-
-  const fuse = new Fuse<KbRow>(candidates, {
-    // Titre fortement pondéré : évite les faux positifs venant du corps de texte
-    // (mieux vaut répondre « pas d'information vérifiée » que lire une fiche sans
-    // rapport — l'assistant ne doit jamais inventer). Seuil 0.4 réglé
-    // empiriquement : les requêtes légitimes matchent, les sujets absents non.
+export function searchFiches(fiches: KbRow[], query: string): KbSearchResult {
+  if (fiches.length === 0) return { found: false };
+  const fuse = new Fuse<KbRow>(fiches, {
     keys: [
       { name: 'title', weight: 0.85 },
       { name: 'content', weight: 0.15 },
@@ -36,11 +31,8 @@ export function searchKnowledgeBase(repo: Repository, args: SearchKnowledgeBaseA
     ignoreLocation: true,
     minMatchCharLength: 3,
   });
-
-  // Filet de sécurité : on écarte les scores quasi nuls (proches de 1).
-  const matches = fuse.search(args.query).filter((m) => (m.score ?? 1) < 0.9).slice(0, 3);
+  const matches = fuse.search(query).filter((m) => (m.score ?? 1) < 0.9).slice(0, 3);
   if (matches.length === 0) return { found: false };
-
   return {
     found: true,
     results: matches.map(({ item }) => ({
@@ -50,4 +42,13 @@ export function searchKnowledgeBase(repo: Repository, args: SearchKnowledgeBaseA
       lastVerified: item.last_verified,
     })),
   };
+}
+
+/**
+ * Recherche dans la base : ne considère QUE les fiches vérifiées (verified=true),
+ * garantie que l'assistant ne lit jamais un contenu non validé.
+ */
+export async function searchKnowledgeBase(repo: Repository, args: SearchKnowledgeBaseArgs): Promise<KbSearchResult> {
+  const candidates = await repo.kbForSearch(args.category, args.operator);
+  return searchFiches(candidates, args.query);
 }

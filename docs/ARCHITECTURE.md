@@ -19,7 +19,7 @@
 │      │                                                         │
 │  ToolRouter ── knowledgeBase / sms / tickets / dossiers / otp  │
 │      │                                                         │
-│  Repository SQLite (appels, tours, outils, SMS, tickets, KB)   │
+│  Repository PostgreSQL/Neon (appels, tours, outils, SMS, …)    │
 │  API REST /api/* pour la console                               │
 └────────────────────────────────────────────────────────────────┘
 ```
@@ -124,6 +124,19 @@ Un futur `SipTransport` implémente la **même interface `CallTransport`** :
 `ToolRouter` ni la base de données.** Seul le transport change. C'est
 l'intérêt de l'abstraction : le MVP navigateur et la future ligne réelle
 partagent 90 % du code.
+
+## Base de données & déploiement
+
+- **PostgreSQL (Neon)** via le pilote `pg` (pool de connexions), accédé par un
+  `Repository` **asynchrone**. Le schéma et les données fictives sont appliqués
+  au premier démarrage. La couche recherche (`searchFiches`) est une fonction
+  **pure** testée sans base ; les tests d'intégration utilisent **PGlite**
+  (Postgres embarqué WASM) — aucun serveur externe requis.
+- **Déploiement tout-Render** : un seul Web Service Node exécute le serveur
+  (Fastify + WebSocket) **et** sert le web buildé (`@fastify/static`), donc une
+  seule origine (WebSocket même origine, pas de CORS). Vercel est écarté pour
+  le serveur car il ne supporte pas les WebSockets longs. Voir
+  `docs/DEPLOIEMENT.md`.
 
 ## Nettoyage des ressources
 

@@ -7,12 +7,12 @@ import type { SendSmsArgs } from '@nextiaa/shared';
  * Enregistré en base et poussé au navigateur (événement sms.received), qui
  * l'affiche dans l'application SMS. À n'appeler qu'après confirmation.
  */
-export function sendSms(
+export async function sendSms(
   repo: Repository,
   transport: CallTransport,
   args: SendSmsArgs,
-): { ok: boolean; to: string } {
-  const row = repo.addSms(transport.callId, transport.callerNumber, args.message);
+): Promise<{ ok: boolean; to: string }> {
+  const row = await repo.addSms(transport.callId, transport.callerNumber, args.message);
   transport.sendEvent({ type: 'sms.received', from: row.from_label, body: row.body, at: row.at });
   return { ok: true, to: transport.callerNumber };
 }

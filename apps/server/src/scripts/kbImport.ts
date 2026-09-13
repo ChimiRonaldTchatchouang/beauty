@@ -1,6 +1,8 @@
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { Repository } from '../db/repository.js';
+import { createPgPool } from '../db/pool.js';
+import { config } from '../config.js';
 import { logger } from '../logger.js';
 
 /**
@@ -50,7 +52,7 @@ function parseCsv(text: string): string[][] {
   return rows;
 }
 
-function main(): void {
+async function main(): Promise<void> {
   const arg = process.argv[2];
   if (!arg) {
     logger.error('Usage : npm run kb:import -- chemin/fichier.csv');
@@ -75,7 +77,12 @@ function main(): void {
     }
   }
 
-  const repo = new Repository();
+  if (!config.hasDatabase) {
+    logger.error('DATABASE_URL absente : impossible d\'importer (voir .env / Neon).');
+    process.exit(1);
+  }
+  const repo = new Repository(createPgPool(config.DATABASE_URL));
+  await repo.init();
   let count = 0;
   for (const cols of rows.slice(1)) {
     const get = (name: string): string => (idx(name) >= 0 ? (cols[idx(name)] ?? '').trim() : '');
@@ -83,7 +90,7 @@ function main(): void {
     if (!id) continue;
     const operator = get('operator');
     const verifiedRaw = get('verified').toLowerCase();
-    repo.kbUpsert({
+    await repo.kbUpsert({
       id,
       category: get('category'),
       operator: operator || null,
@@ -91,12 +98,12 @@ function main(): void {
       content: get('content'),
       source: get('source') || null,
       last_verified: get('lastVerified') || null,
-      verified: ['1', 'true', 'oui', 'yes'].includes(verifiedRaw) ? 1 : 0,
+      verified: ['1', 'true', 'oui', 'yes'].includes(verifiedRaw),
     });
     count++;
   }
-  repo.close();
+  await repo.close();
   logger.info({ count, path }, 'Import CSV terminé');
 }
 
-main();
+void main();

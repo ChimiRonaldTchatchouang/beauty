@@ -14,6 +14,7 @@ par **Nextiaa** (Douala, Cameroun).
 
 - **Node.js 20+** (testé sous Node 22) et **npm 10+**.
 - Une **clé API Google AI Studio** (gratuite).
+- Une **base PostgreSQL Neon** (gratuite) — chaîne de connexion `DATABASE_URL`.
 
 ## Obtenir la clé gratuite
 
@@ -28,8 +29,11 @@ git clone <ce-dépôt> nextiaa-voice
 cd nextiaa-voice
 npm install
 cp .env.example .env
-# puis éditer .env et coller la clé dans GEMINI_API_KEY
+# puis éditer .env : coller GEMINI_API_KEY et DATABASE_URL (Neon)
 ```
+
+Le schéma et les données fictives sont créés **automatiquement** au premier
+démarrage (aucune migration manuelle).
 
 ## Lancement
 
@@ -74,6 +78,7 @@ Voir [`.env.example`](.env.example) pour la liste commentée. Points clés :
 
 | Variable | Rôle |
 |---|---|
+| `DATABASE_URL` | Connexion PostgreSQL Neon (**jamais** dans le navigateur). |
 | `GEMINI_API_KEY` | Clé du niveau gratuit (**jamais** dans le navigateur). |
 | `GEMINI_LIVE_MODEL` | Modèle Live (défaut `gemini-3.1-flash-live-preview`). |
 | `GEMINI_VOICE` | Voix prédéfinie (défaut `Kore`). |
@@ -89,6 +94,7 @@ Voir [`.env.example`](.env.example) pour la liste commentée. Points clés :
 - [`docs/GEMINI_NOTES.md`](docs/GEMINI_NOTES.md) — modèle, paramètres, limites,
   voix testées.
 - [`docs/DEMO.md`](docs/DEMO.md) — scénarios prêts pour un rendez-vous client.
+- [`docs/DEPLOIEMENT.md`](docs/DEPLOIEMENT.md) — déploiement Neon + Render.
 - [`CLAUDE.md`](CLAUDE.md) — conventions du projet.
 
 ## Sécurité & confidentialité

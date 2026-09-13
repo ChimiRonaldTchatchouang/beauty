@@ -1,4 +1,6 @@
 import { Repository } from './repository.js';
+import { createPgPool } from './pool.js';
+import { config } from '../config.js';
 import { logger } from '../logger.js';
 
 /** Dossiers de sinistre FICTIFS, rattachés aux numéros fictifs de test. */
@@ -27,18 +29,24 @@ const FICTIONAL_CASES = [
 ];
 
 /** (Re)remplit la base avec les données de démonstration fictives. */
-export function seed(repo: Repository): void {
-  repo.seedKnowledgeIfEmpty();
-  if (repo.caseCount() === 0) {
-    for (const c of FICTIONAL_CASES) repo.upsertCase(c);
+export async function seed(repo: Repository): Promise<void> {
+  await repo.seedKnowledgeIfEmpty();
+  if ((await repo.caseCount()) === 0) {
+    for (const c of FICTIONAL_CASES) await repo.upsertCase(c);
     logger.info({ count: FICTIONAL_CASES.length }, 'Dossiers de sinistre fictifs initialisés');
   }
 }
 
 // Exécution directe : `npm run db:seed`.
 if (import.meta.url === `file://${process.argv[1]}`) {
-  const repo = new Repository();
-  seed(repo);
-  repo.close();
+  if (!config.hasDatabase) {
+    logger.error('DATABASE_URL absente : impossible de semer la base (voir .env / Neon).');
+    process.exit(1);
+  }
+  const pool = createPgPool(config.DATABASE_URL);
+  const repo = new Repository(pool);
+  await repo.init();
+  await seed(repo);
+  await repo.close();
   logger.info('Seed terminé.');
 }

@@ -73,9 +73,9 @@ export class ToolRouter implements ToolExecutor {
     }
   }
 
-  private persist(callId: string, name: string, args: Record<string, unknown>, result: ToolResult): ToolResult {
+  private async persist(callId: string, name: string, args: Record<string, unknown>, result: ToolResult): Promise<ToolResult> {
     try {
-      this.repo.addToolCall(callId, name, JSON.stringify(args), result.ok, JSON.stringify(result.response));
+      await this.repo.addToolCall(callId, name, JSON.stringify(args), result.ok, JSON.stringify(result.response));
     } catch (err) {
       logger.error({ callId, name, err }, 'Échec persistance tool_call');
     }
@@ -106,8 +106,8 @@ export class ToolRouter implements ToolExecutor {
           required: ['query'],
         },
       },
-      (args) => {
-        const result = searchKnowledgeBase(this.repo, args as z.infer<(typeof TOOL_ARG_SCHEMAS)['search_knowledge_base']>);
+      async (args) => {
+        const result = await searchKnowledgeBase(this.repo, args as z.infer<(typeof TOOL_ARG_SCHEMAS)['search_knowledge_base']>);
         return { ok: true, response: result as unknown as Record<string, unknown> };
       },
     );
@@ -126,8 +126,8 @@ export class ToolRouter implements ToolExecutor {
           required: ['message'],
         },
       },
-      (args, ctx) => {
-        const result = sendSms(this.repo, ctx.transport, args as z.infer<(typeof TOOL_ARG_SCHEMAS)['send_sms']>);
+      async (args, ctx) => {
+        const result = await sendSms(this.repo, ctx.transport, args as z.infer<(typeof TOOL_ARG_SCHEMAS)['send_sms']>);
         return { ok: result.ok, response: result as unknown as Record<string, unknown> };
       },
     );
@@ -151,10 +151,10 @@ export class ToolRouter implements ToolExecutor {
           required: ['category', 'summary', 'priority'],
         },
       },
-      (args, ctx) => {
+      async (args, ctx) => {
         const a = args as z.infer<(typeof TOOL_ARG_SCHEMAS)['create_ticket']>;
-        const ticket = this.repo.createTicket({
-          reference: this.repo.nextTicketReference(),
+        const ticket = await this.repo.createTicket({
+          reference: await this.repo.nextTicketReference(),
           callId: ctx.callId,
           category: a.category,
           summary: a.summary,
@@ -172,9 +172,9 @@ export class ToolRouter implements ToolExecutor {
           "À utiliser avant de consulter un dossier (get_case_status). Le code est valable 5 minutes.",
         parametersJsonSchema: { type: 'object', properties: {} },
       },
-      (_args, ctx) => {
+      async (_args, ctx) => {
         const code = this.verification.generate(ctx.callId);
-        sendSms(this.repo, ctx.transport, {
+        await sendSms(this.repo, ctx.transport, {
           message: `Nextiaa (démo) : votre code de vérification est ${code}. Valable 5 minutes. Ne le communiquez à personne.`,
         });
         return { ok: true, response: { sent: true } };
@@ -212,12 +212,12 @@ export class ToolRouter implements ToolExecutor {
           required: ['caseReference'],
         },
       },
-      (args, ctx) => {
+      async (args, ctx) => {
         const a = args as z.infer<(typeof TOOL_ARG_SCHEMAS)['get_case_status']>;
         if (!this.verification.isVerified(ctx.callId)) {
           return { ok: false, response: { error: 'Appelant non vérifié. Vérifie l\'identité avant de consulter un dossier.' } };
         }
-        const c = this.repo.getCase(a.caseReference.trim().toUpperCase());
+        const c = await this.repo.getCase(a.caseReference.trim().toUpperCase());
         if (!c) return { ok: true, response: { found: false } };
         return {
           ok: true,
@@ -241,10 +241,10 @@ export class ToolRouter implements ToolExecutor {
           required: ['reason', 'summary'],
         },
       },
-      (args, ctx) => {
+      async (args, ctx) => {
         const a = args as z.infer<(typeof TOOL_ARG_SCHEMAS)['transfer_to_human']>;
-        const ticket = this.repo.createTicket({
-          reference: this.repo.nextTicketReference(),
+        const ticket = await this.repo.createTicket({
+          reference: await this.repo.nextTicketReference(),
           callId: ctx.callId,
           category: 'transfert',
           summary: `${a.reason} — ${a.summary}`,

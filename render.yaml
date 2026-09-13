@@ -1,0 +1,39 @@
+# Déploiement Nextiaa Voice sur Render (tout-en-un : serveur + web).
+# Voir docs/DEPLOIEMENT.md pour le pas-à-pas.
+services:
+  - type: web
+    name: nextiaa-voice
+    runtime: node
+    # Région proche de la base Neon (us-east-2 / Ohio) pour la latence des outils.
+    region: ohio
+    plan: free
+    # Installe les dépendances puis construit le web (servi par le serveur).
+    buildCommand: npm install && npm run build
+    # Démarre le serveur (Fastify + WebSocket) ; il sert aussi le web buildé.
+    startCommand: npm start
+    healthCheckPath: /health
+    envVars:
+      # Secrets à renseigner dans le tableau de bord Render (sync:false).
+      - key: DATABASE_URL
+        sync: false
+      - key: GEMINI_API_KEY
+        sync: false
+      - key: CONSOLE_PASSWORD
+        sync: false
+      # Réglages non secrets.
+      - key: NODE_ENV
+        value: production
+      - key: GEMINI_LIVE_MODEL
+        value: gemini-3.1-flash-live-preview
+      - key: GEMINI_VOICE
+        value: Kore
+      - key: VAD_SILENCE_MS
+        value: "700"
+      - key: MAX_CALL_MINUTES
+        value: "10"
+      - key: DEMO_NUMBERS
+        value: "8000"
+      - key: USSD_CODE
+        value: "#136#"
+      - key: TIMEZONE
+        value: Africa/Douala
