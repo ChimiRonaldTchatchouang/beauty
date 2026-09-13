@@ -64,6 +64,7 @@ export class GeminiLiveClient {
 
   async connect(): Promise<void> {
     const config = buildLiveConfig({
+      model: this.opts.model,
       systemInstruction: this.opts.systemInstruction,
       voice: this.opts.voice,
       vadSilenceMs: this.opts.vadSilenceMs,

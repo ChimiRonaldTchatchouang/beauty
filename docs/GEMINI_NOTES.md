@@ -24,13 +24,17 @@ Pages à lire (section 4 du cahier des charges) :
 
 ## 1. Modèle Live
 
-- **Point de départ** (variable `.env` `GEMINI_LIVE_MODEL`) :
-  `gemini-3.1-flash-live-preview`.
-- **Alternative** : `gemini-2.5-flash-native-audio-preview-12-2025`.
-- ⚠️ **À RECONFIRMER** : le **nom exact** du modèle disponible et sa
-  **disponibilité sur le niveau gratuit** d'AI Studio. Les modèles Live sont
-  en *preview* et changent de nom régulièrement. Le modèle est configurable
-  sans toucher au code (`.env`) précisément pour absorber ces changements.
+- **Défaut retenu** (variable `.env` `GEMINI_LIVE_MODEL`) :
+  **`gemini-2.5-flash-native-audio-preview-12-2025`** — modèle **audio-natif**
+  (traitement direct de l'audio, latence minimale, voix la plus naturelle).
+  Confirmé disponible sur AI Studio / Vertex (recherche web, sept. 2026).
+- **Alternative « cascade »** : `gemini-2.5-flash-live-preview`.
+- **Important** : les modèles **audio-natifs ne prennent pas `thinkingConfig`**
+  → le code ne l'ajoute que pour les modèles non audio-natifs (voir
+  `sessionConfig.ts`).
+- ⚠️ **À RECONFIRMER en conditions réelles** : quotas exacts du **niveau
+  gratuit** pour ce modèle, et le comportement des outils (synchrones). Le
+  modèle reste configurable via `.env` sans toucher au code.
 
 ## 2. SDK `@google/genai` (JavaScript) — champs attendus
 

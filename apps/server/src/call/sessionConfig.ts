@@ -1,6 +1,8 @@
 import { Modality, type FunctionDeclaration, type LiveConnectConfig } from '@google/genai';
 
 export interface SessionConfigInput {
+  /** Nom du modèle Live (pour adapter la config selon audio-natif / cascade). */
+  model: string;
   /** Instructions système déjà interpolées (variables d'appel injectées). */
   systemInstruction: string;
   /** Voix prédéfinie (ex. Kore). */
@@ -42,14 +44,17 @@ export function buildLiveConfig(input: SessionConfigInput): LiveConnectConfig {
     realtimeInputConfig: {
       automaticActivityDetection: { silenceDurationMs: input.vadSilenceMs },
     },
-    // Réflexion minimale = latence minimale (objectif < 1 s).
-    // NB : certains modèles Gemini 3.x utilisent `thinkingLevel` plutôt que
-    // `thinkingBudget` ; à reconfirmer selon le modèle (docs/GEMINI_NOTES.md).
-    thinkingConfig: { thinkingBudget: 0 },
     // Reprise de session (J6) et compression de contexte (sessions longues).
     sessionResumption: input.resumeHandle ? { handle: input.resumeHandle } : {},
     contextWindowCompression: { slidingWindow: {} },
   };
+
+  // Réflexion minimale = latence minimale (objectif < 1 s). Les modèles
+  // AUDIO-NATIFS ne prennent pas thinkingConfig : on ne l'ajoute que pour les
+  // modèles « cascade » (ex. *-flash-live-*) afin d'éviter une erreur de connexion.
+  if (!input.model.includes('native-audio')) {
+    config.thinkingConfig = { thinkingBudget: 0 };
+  }
 
   if (input.functionDeclarations.length > 0) {
     config.tools = [{ functionDeclarations: input.functionDeclarations }];

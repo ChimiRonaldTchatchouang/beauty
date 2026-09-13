@@ -23,7 +23,7 @@ if (existsSync(rootEnv)) {
 const EnvSchema = z.object({
   DATABASE_URL: z.string().default(''),
   GEMINI_API_KEY: z.string().default(''),
-  GEMINI_LIVE_MODEL: z.string().default('gemini-3.1-flash-live-preview'),
+  GEMINI_LIVE_MODEL: z.string().default('gemini-2.5-flash-native-audio-preview-12-2025'),
   GEMINI_VOICE: z.string().default('Kore'),
   VAD_SILENCE_MS: z.coerce.number().int().min(0).default(700),
   MAX_CALL_MINUTES: z.coerce.number().int().positive().default(10),
