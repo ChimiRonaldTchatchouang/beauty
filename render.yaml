@@ -7,8 +7,9 @@ services:
     # Région proche de la base Neon (us-east-2 / Ohio) pour la latence des outils.
     region: ohio
     plan: free
-    # Installe les dépendances puis construit le web (servi par le serveur).
-    buildCommand: npm install && npm run build
+    # Installe TOUTES les dépendances (dont devDeps : vite, tsc, tailwind…),
+    # sinon le build du web échoue car NODE_ENV=production les exclut.
+    buildCommand: npm install --include=dev && npm run build
     # Démarre le serveur (Fastify + WebSocket) ; il sert aussi le web buildé.
     startCommand: npm start
     healthCheckPath: /health

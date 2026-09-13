@@ -40,7 +40,9 @@ Le dépôt contient `render.yaml` (Blueprint). Deux options :
 ### Option B — service manuel
 - **New → Web Service**, connecter le dépôt.
 - Runtime **Node**, région **Ohio**.
-- Build : `npm install && npm run build`
+- Build : `npm install --include=dev && npm run build`
+  (le `--include=dev` est requis car `NODE_ENV=production` exclurait sinon
+  `vite`/`tsc` et le build du web échouerait)
 - Start : `npm start`
 - Health check path : `/health`
 - Ajouter les variables d'environnement (voir `.env.example`).
